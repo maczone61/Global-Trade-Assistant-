@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -15,6 +16,7 @@ header p{margin:0;color:var(--muted);font-size:13px}
 .wrap{max-width:1100px;margin:auto;padding:14px}
 .notice{background:#183329;border:1px solid #2c6b56;color:#c9f6e7;border-radius:12px;padding:11px 13px;font-size:13px;margin-bottom:14px}
 .notice.warning{background:#392d1b;border-color:#72552a;color:#ffe5ad}
+.notice.error{background:#49272c;border-color:#78434a;color:#ffd9d9}
 nav{display:flex;gap:7px;overflow-x:auto;padding:4px 0 13px;position:sticky;top:0;background:var(--bg);z-index:5}
 nav button{white-space:nowrap;border:1px solid var(--line);background:var(--panel);color:var(--muted);padding:9px 13px;border-radius:10px;font-weight:600}
 nav button.active{background:var(--accent);color:#092018;border-color:var(--accent)}
@@ -79,7 +81,7 @@ a{color:var(--blue);overflow-wrap:anywhere}
 
 <section id="authPanel" class="panel authbox">
  <h2>Sign in to your business workspace</h2>
- <p class="muted">Your supplier, product and buyer records will be stored in your Supabase account, not just on this phone.</p>
+ <p class="muted">Your business records are stored in your private Supabase account.</p>
  <label>Email address</label>
  <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com">
  <label>Password</label>
@@ -99,8 +101,10 @@ a{color:var(--blue);overflow-wrap:anywhere}
 </div>
 
 <div class="notice">
- <b>Cloud-connected version:</b> Supplier, product, buyer, supplier-lead and email-draft records are saved to your Supabase account. Supplier discovery searches public sources across Bangladesh. Buyer discovery uses public web search and AI assessment. Prospects are not confirmed buyers. Emails are prepared as drafts only; automatic sending and social-media publishing are not connected.
+ <b>Cloud-connected version:</b> Supplier, product, buyer, supplier-lead and email-draft records are saved to your Supabase account. Supplier discovery searches public sources across Bangladesh. Buyer discovery uses public web search and AI assessment. Prospects are not confirmed buyers. Emails are prepared as drafts only; automatic sending is not connected.
 </div>
+
+<div id="buyerNotification" class="notice hidden" aria-live="polite"></div>
 
 <nav id="tabs">
  <button class="active" data-view="dashboard">Dashboard</button>
@@ -126,17 +130,23 @@ a{color:var(--blue);overflow-wrap:anywhere}
   <div class="card"><div class="muted">Awaiting supplier agreement</div><div class="metric" id="mNegotiating">0</div></div>
  </div>
  <div class="panel">
-  <h3>How to use the business workflow</h3>
+  <h3>Business workflow</h3>
   <ol class="muted">
-   <li>Search for garment stocklots and surplus offers using Discover suppliers.</li>
-   <li>Review the public evidence and save useful findings in Supplier Product Leads.</li>
-   <li>Contact the supplier yourself and verify the actual stock, price, quantity and terms.</li>
-   <li>Update the lead status as discussions progress.</li>
-   <li>Only after reaching an agreement, change its status to Agreement reached and upload it to Products.</li>
-   <li>Use Discover buyers to research international companies for your active products.</li>
-   <li>Review buyer evidence, matching signals and email drafts before taking action.</li>
+   <li>Search Bangladesh for garment stocklots and surplus offers.</li>
+   <li>Save useful findings in Supplier Product Leads.</li>
+   <li>Contact suppliers and verify actual stock, price, quantity and terms.</li>
+   <li>Update the supplier lead status as discussions progress.</li>
+   <li>After agreement and permission, upload the offer to Products.</li>
+   <li>The app will automatically search for international buyer prospects after a product is saved.</li>
+   <li>Review the buyer assessments and prepare emails for your approval.</li>
   </ol>
-  <p class="small">Discovered supplier offers are not verified inventory. A discovered company is not automatically a supplier, and a buyer prospect is not a confirmed buyer.</p>
+  <p class="small">Discovered supplier offers are not verified inventory. Buyer prospects are not confirmed purchasers.</p>
+ </div>
+ <div class="panel" style="margin-top:12px">
+  <h3>Automatic buyer discovery</h3>
+  <p class="muted">After a new product is saved, the app searches your selected default markets: United Kingdom, Germany and Netherlands. It can also be run manually from Discover buyers.</p>
+  <div id="autoBuyerStatus" class="statusline">No automatic buyer search has run during this session.</div>
+  <button class="secondary" onclick="openView('discovery')">Open buyer discovery</button>
  </div>
  <div class="panel" style="margin-top:12px">
   <h3>Recent activity</h3>
@@ -171,9 +181,9 @@ a{color:var(--blue);overflow-wrap:anywhere}
 <section id="supplierDiscovery" class="view">
  <h2>Bangladesh supplier and stocklot discovery</h2>
  <div class="panel">
-  <p class="muted">Search public websites for Bangladesh garment stocklots, export surplus, cancelled orders, factory excess stock and wholesale clothing offers. The search covers Bangladesh nationwide; it is not restricted to a particular district.</p>
-  <div class="notice warning">Search findings are unverified leads, not confirmed available inventory. You must contact suppliers and verify the products before offering them to buyers.</div>
-  <p class="small">The search uses the connected Cloudflare Worker and Tavily. The current Worker performs a maximum of three public searches per request. Searches may not find every offer on the internet.</p>
+  <p class="muted">Search public websites for Bangladesh garment stocklots, export surplus, cancelled orders, factory excess stock and wholesale clothing offers. The search covers Bangladesh nationwide, with no district restriction.</p>
+  <div class="notice warning">Search findings are unverified leads, not confirmed available inventory. Contact suppliers and verify products before offering them to buyers.</div>
+  <p class="small">The current Worker uses a maximum of three public searches per request. Search results may not cover every online offer.</p>
   <button id="discoverSuppliersBtn" onclick="discoverSuppliers()">Search Bangladesh for garment stocklots</button>
   <p id="supplierDiscoveryStatus" class="statusline" aria-live="polite">Ready to search public sources across Bangladesh.</p>
  </div>
@@ -206,6 +216,9 @@ a{color:var(--blue);overflow-wrap:anywhere}
 
 <section id="products" class="view">
  <div class="row between"><h2>Product catalogue</h2><button onclick="showForm('productForm')">+ Add product</button></div>
+ <div class="panel" style="margin-bottom:12px">
+  <p class="muted">A successful new product save automatically starts buyer discovery in the default target markets. You do not need to press the buyer-search button separately.</p>
+ </div>
  <div id="productForm" class="panel" hidden>
   <h3>Garment stocklot details</h3>
   <form id="pf">
@@ -224,7 +237,7 @@ a{color:var(--blue);overflow-wrap:anywhere}
     <div><label>Product photo</label><input name="photo" type="file" accept="image/*"></div>
     <div class="full"><label>Specifications, packaging, certifications (only verified claims), notes</label><textarea name="notes"></textarea></div>
    </div>
-   <div class="row"><button type="submit">Save product</button><button type="button" class="secondary" onclick="hideForm('productForm')">Cancel</button></div>
+   <div class="row"><button type="submit">Save product and find buyers</button><button type="button" class="secondary" onclick="hideForm('productForm')">Cancel</button></div>
   </form>
  </div>
  <input class="search" id="productSearch" placeholder="Search products..." oninput="renderProducts()">
@@ -234,12 +247,12 @@ a{color:var(--blue);overflow-wrap:anywhere}
 <section id="discovery" class="view">
  <h2>International buyer discovery</h2>
  <div class="panel">
-  <p class="muted">Search public websites for companies that may purchase garment stocklots, surplus clothing or wholesale apparel. The AI will assess the search evidence. It cannot confirm current buying interest.</p>
+  <p class="muted">Search public websites for companies that may purchase garment stocklots, surplus clothing or wholesale apparel. The AI assesses the available search evidence. It cannot confirm current buying interest.</p>
   <label>Select a product from your catalogue</label>
   <select id="discoveryProduct"></select>
   <label>Target countries (separate countries with commas)</label>
   <input id="discoveryCountries" value="United Kingdom, Germany, Netherlands" placeholder="United Kingdom, Germany, Netherlands">
-  <p class="small">Each search uses one Tavily credit. A maximum of three country searches and five AI assessments are performed per request.</p>
+  <p class="small">The Worker currently limits each request to three country searches and five AI assessments.</p>
   <button id="discoverBtn" onclick="discoverBuyers()">Search for international buyers</button>
   <p id="discoveryStatus" class="statusline" aria-live="polite">Choose a product and target markets to begin.</p>
  </div>
@@ -295,12 +308,12 @@ a{color:var(--blue);overflow-wrap:anywhere}
  <h2>Backup and data transfer</h2>
  <div class="panel">
   <p class="muted">Your records are stored in your private Supabase workspace. Export a portable JSON backup periodically. Cloud records are not deleted by clearing this browser.</p>
-  <div class="row"><button onclick="exportData()">Export backup</button><button class="secondary" onclick="importData()">Import backup (not yet enabled)</button></div>
+  <div class="row"><button onclick="exportData()">Export backup</button><button class="secondary" onclick="importData()">Import backup (not enabled)</button></div>
   <hr><span class="small">Bulk deletion is disabled for safety.</span>
  </div>
 </section>
 
-<footer>Global Trade Sales Assistant · Private working tool · Version 0.3 · Store only genuine, accurately described product and company information.</footer>
+<footer>Global Trade Sales Assistant · Private working tool · Version 0.4 · Store only genuine, accurately described product and company information.</footer>
 </div>
 </main>
 
@@ -310,11 +323,14 @@ const SUPABASE_URL='https://fkgdpiwybthnujgkmxxb.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_NyBWgoM_yZGrbWBfnb5woQ_SnELkNod';
 const WORKER_URL='https://global-trade-sales-api.maczone61.workers.dev';
 
+const DEFAULT_BUYER_COUNTRIES=['United Kingdom','Germany','Netherlands'];
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
 let currentUser=null;
 let db={suppliers:[],products:[],buyers:[],emails:[],supplierLeads:[],activity:[]};
 let discoveredResults=[];
 let discoveredSupplierResults=[];
+let automaticBuyerSearchRunning=false;
 
 function blank(){
  return {suppliers:[],products:[],buyers:[],emails:[],supplierLeads:[],activity:[]};
@@ -326,9 +342,21 @@ function esc(s){
  return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function listText(v){
- if(Array.isArray(v))return v.map(x=>String(x??'')).filter(Boolean).join(' · ');
+ if(Array.isArray(v))return v.map(x=>typeof x==='string'?x:JSON.stringify(x)).filter(Boolean).join(' · ');
  if(v==null)return '';
+ if(typeof v==='object')return JSON.stringify(v);
  return String(v);
+}
+function asArray(v){
+ if(Array.isArray(v))return v;
+ if(v==null||v==='')return [];
+ return [String(v)];
+}
+function safeUrl(v){
+ try{
+  const u=new URL(String(v||''));
+  return u.protocol==='https:'||u.protocol==='http:'?u.href:'';
+ }catch{return ''}
 }
 function sayAuth(t,kind=''){
  let e=document.getElementById('authMessage');
@@ -336,13 +364,18 @@ function sayAuth(t,kind=''){
 }
 function log(s){
  db.activity.unshift(new Date().toLocaleString()+' — '+s);
- db.activity=db.activity.slice(0,15);
+ db.activity=db.activity.slice(0,20);
 }
 function showForm(key){
  document.getElementById(key).hidden=false;
  if(key==='productForm')fillSupplierSelect();
 }
 function hideForm(key){document.getElementById(key).hidden=true}
+function openView(view){
+ document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.view===view));
+ document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===view));
+ renderAll();
+}
 function setSignedIn(user){
  currentUser=user;
  document.getElementById('authPanel').classList.toggle('hidden',!!user);
@@ -368,7 +401,7 @@ async function authAction(mode){
 }
 
 async function enterWorkspace(user){
- if(currentUser?.id===user.id&&document.getElementById('appArea').classList.contains('hidden')===false)return;
+ if(currentUser?.id===user.id&&!document.getElementById('appArea').classList.contains('hidden'))return;
  setSignedIn(user);
  try{await loadCloudData();renderAll()}
  catch(e){alert('Could not load your cloud records: '+e.message)}
@@ -384,13 +417,13 @@ async function loadCloudData(){
  ]);
  for(let r of [ss,pp,bb,ee,ll])if(r.error)throw r.error;
 
- db.suppliers=ss.data.map(x=>({
+ db.suppliers=(ss.data||[]).map(x=>({
   id:x.id,name:x.company_name,contact:x.contact_person,phone:x.phone,
   email:x.email,website:x.website,location:x.location,type:x.supplier_type,
   source:x.source_url||'',status:x.verification_status,notes:x.notes,created:x.created_at
  }));
 
- db.products=pp.data.map(x=>({
+ db.products=(pp.data||[]).map(x=>({
   id:x.id,name:x.product_name,supplier:x.supplier_id,condition:x.condition,
   fabric:x.fabric_composition,quantity:x.quantity,
   price:x.unit_price==null?'':String(x.currency||'USD')+' '+x.unit_price,
@@ -399,7 +432,7 @@ async function loadCloudData(){
   photoPath:x.photo_path,notes:x.notes,created:x.created_at
  }));
 
- db.buyers=bb.data.map(x=>({
+ db.buyers=(bb.data||[]).map(x=>({
   id:x.id,name:x.company_name,country:x.country,website:x.website,
   email:x.public_email,contact:x.contact_person,type:x.buyer_type,
   evidence:x.research_confidence,interest:x.buying_interest,
@@ -408,7 +441,7 @@ async function loadCloudData(){
   optOut:x.opt_out,created:x.created_at
  }));
 
- db.emails=ee.data.map(x=>({
+ db.emails=(ee.data||[]).map(x=>({
   id:x.id,buyer:x.recipient_email,product:'',subject:x.subject,
   body:x.message_body,date:x.created_at,buyerId:x.buyer_id,productId:x.product_id
  }));
@@ -441,11 +474,7 @@ sb.auth.onAuthStateChange((event,session)=>{
 })();
 
 document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>{
- document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
- document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
- b.classList.add('active');
- document.getElementById(b.dataset.view).classList.add('active');
- renderAll();
+ openView(b.dataset.view);
 }));
 
 // SUPPLIERS
@@ -456,7 +485,7 @@ document.getElementById('sf').addEventListener('submit',async e=>{
   company_name:x.name,contact_person:x.contact||null,phone:x.phone||null,
   email:x.email||null,website:x.website||null,location:x.location||null,
   supplier_type:x.type||null,source_url:x.source||null,
-  verification_status:x.status||'unverified',notes:x.notes||null
+  verification_status:x.status||'Not verified',notes:x.notes||null
  });
  if(r.error){alert('Could not save supplier: '+r.error.message);return}
  log('Supplier added: '+x.name);
@@ -467,6 +496,20 @@ function fillSupplierSelect(){
  let s=document.getElementById('productSupplier');
  s.innerHTML=db.suppliers.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
  if(!db.suppliers.length)s.innerHTML='<option value="">Add a supplier first</option>';
+}
+
+// PRICE AND QUANTITY HELPERS
+function parsePrice(value){
+ let t=String(value||'').trim(),currency='USD',amount=null;
+ let m=t.match(/([A-Z]{3})\s*([0-9]+(?:\.[0-9]+)?)/i);
+ if(m){currency=m[1].toUpperCase();amount=Number(m[2])}
+ else if(/^\d+(?:\.\d+)?$/.test(t)){amount=Number(t)}
+ return {currency,amount};
+}
+function numericQuantity(value){
+ if(value==null)return null;
+ let m=String(value).replace(/,/g,'').match(/\d+(?:\.\d+)?/);
+ return m?Number(m[0]):null;
 }
 
 // PRODUCTS
@@ -491,45 +534,27 @@ document.getElementById('pf').addEventListener('submit',async e=>{
   sizes:x.sizes||null,colours:x.colours||null,
   availability_status:x.availability||'available',
   shipping_terms:x.shipping||null,photo_path:photoPath,notes:x.notes||null
- });
+ }).select('id').single();
+
  if(r.error){
   if(photoPath)await sb.storage.from('gtsa-product-photos').remove([photoPath]);
   alert('Could not save product: '+r.error.message);return;
  }
+
+ const newProduct={
+  id:r.data.id,name:x.name,supplier:x.supplier,condition:x.condition,
+  fabric:x.fabric,quantity:x.quantity,price:x.price,moq:x.moq,
+  sizes:x.sizes,colours:x.colours,availability:x.availability,
+  shipping:x.shipping,photoPath,notes:x.notes
+ };
+
  log('Product added: '+x.name);
- f.reset();hideForm('productForm');await refresh();
-});
+ f.reset();hideForm('productForm');
+ await refresh();
 
-function parsePrice(value){
- let t=String(value||'').trim(),currency='USD',amount=null;
- let m=t.match(/([A-Z]{3})\s*([0-9]+(?:\.[0-9]+)?)/i);
- if(m){currency=m[1].toUpperCase();amount=Number(m[2])}
- else if(/^\d+(?:\.\d+)?$/.test(t)){amount=Number(t)}
- return {currency,amount};
-}
-function numericQuantity(value){
- if(value==null)return null;
- let m=String(value).replace(/,/g,'').match(/\d+(?:\.\d+)?/);
- return m?Number(m[0]):null;
-}
-
-// MANUAL BUYER ENTRY
-document.getElementById('bf').addEventListener('submit',async e=>{
- e.preventDefault();
- let x=Object.fromEntries(new FormData(e.target));
- let ev=x.evidence.startsWith('A')?'A':x.evidence.startsWith('B')?'B':'C';
- let interest=x.interest;
- let r=await sb.from('gtsa_buyers').insert({
-  company_name:x.name,country:x.country,website:x.website||null,
-  public_email:x.email||null,contact_person:x.contact||null,
-  buyer_type:x.type||null,research_confidence:ev,
-  buying_interest:interest,
-  contact_status:interest==='Not contacted'?'not_contacted':'contacted',
-  product_interests:x.notes||null,evidence_url:null,
-  opt_out:interest==='Opted out'
- });
- if(r.error){alert('Could not save buyer: '+r.error.message);return}
- log('Buyer added: '+x.name);e.target.reset();hideForm('buyerForm');await refresh();
+ // The product is saved first. Buyer research runs afterwards.
+ showBuyerNotification('Product saved. Automatic international buyer discovery is starting for: '+x.name,'info');
+ runAutomaticBuyerDiscovery(newProduct);
 });
 
 // AUTHENTICATED WORKER REQUEST
@@ -555,7 +580,278 @@ async function workerPost(endpoint,payload){
  return data;
 }
 
+// IN-APP NOTIFICATION
+function showBuyerNotification(message,kind='info'){
+ const el=document.getElementById('buyerNotification');
+ el.textContent=message;
+ el.classList.remove('hidden','error');
+ if(kind==='error')el.classList.add('error');
+ document.getElementById('autoBuyerStatus').textContent=message;
+}
+
+// BUYER DISCOVERY CORE
+function makeBuyerPayload(product,countries){
+ return {
+  product:{
+   product_name:product.name||product.product_name,
+   product_type:product.name||product.product_type||product.product_name,
+   condition:product.condition||'Not specified',
+   fabric:product.fabric||product.fabric_composition||null,
+   fabric_composition:product.fabric||product.fabric_composition||null,
+   quantity:product.quantity||null,
+   unit_price:product.price||product.unit_price||null,
+   minimum_order_quantity:product.moq||product.minimum_order_quantity||null,
+   sizes:product.sizes||null,
+   colours:product.colours||null,
+   shipping_terms:product.shipping||product.shipping_terms||null
+  },
+  countries:countries.slice(0,3)
+ };
+}
+
+function buyerDuplicate(b){
+ const name=String(b.company_name||'').trim().toLowerCase();
+ const website=String(b.website||'').trim().toLowerCase().replace(/\/+$/,'');
+ return db.buyers.some(x=>{
+  const oldName=String(x.name||'').trim().toLowerCase();
+  const oldWebsite=String(x.website||'').trim().toLowerCase().replace(/\/+$/,'');
+  return (website&&oldWebsite===website)||(name&&oldName===name);
+ });
+}
+
+function buyerNotes(r,product,countries){
+ return [
+  'DISCOVERED THROUGH PUBLIC WEB SEARCH',
+  'AI assessment score: '+(r.total_score??'Not supplied')+'/100',
+  'Recommendation: '+(r.recommendation||'Not supplied'),
+  'AI confidence: '+(r.confidence||'LOW'),
+  'Assessment: '+(r.reason||''),
+  'Evidence summary: '+listText(r.evidence_summary),
+  'Missing information: '+listText(r.missing_information),
+  'Risk flags: '+listText(r.risk_flags),
+  'Search source title: '+(r.source_title||''),
+  'Source date: '+(r.source_date||'Not supplied'),
+  'Search markets: '+countries.join(', '),
+  'Product researched: '+(product.name||product.product_name||''),
+  'Research date: '+new Date().toISOString(),
+  'Important: Search prospect only. Current buying interest and business identity require verification.'
+ ].join('\n');
+}
+
+async function saveBuyerAssessment(r,product,countries,automatic=false){
+ const b=r.buyer||r.company||{};
+ if(!b||(!b.company_name&&!r.source_title))return {saved:false,reason:'No company name'};
+
+ const score=Number(r.total_score??0);
+ const recommendation=String(r.recommendation||'').toUpperCase();
+
+ // Automatic mode excludes rejected and very weak prospects.
+ if(automatic&&(recommendation==='REJECT'||score<25)){
+  return {saved:false,reason:'Below automatic saving threshold'};
+ }
+
+ if(buyerDuplicate(b))return {saved:false,duplicate:true};
+
+ const record={
+  company_name:b.company_name||r.source_title||'Unidentified company',
+  country:b.country||r.country||'Not verified',
+  website:safeUrl(b.website)||null,
+  public_email:b.public_email||b.email||null,
+  contact_person:b.contact_person||null,
+  buyer_type:r.company_type||b.company_type||'Unverified garment trade prospect',
+  research_confidence:score>=75?'A':score>=50?'B':'C',
+  buying_interest:'Not contacted',
+  contact_status:'not_contacted',
+  product_interests:'Potential product fit researched for: '+(product.name||product.product_name||'Product')+
+   '. Product condition: '+(product.condition||'Not stated')+
+   '. Fabric: '+(product.fabric||product.fabric_composition||'Not stated'),
+  evidence_url:safeUrl(b.evidence_url)||safeUrl(b.website)||null,
+  notes:buyerNotes(r,product,countries),
+  opt_out:false
+ };
+
+ const result=await sb.from('gtsa_buyers').insert(record).select('id').single();
+ if(result.error){
+  if(String(result.error.code)==='23505')return {saved:false,duplicate:true};
+  throw result.error;
+ }
+ return {saved:true,name:record.company_name,score};
+}
+
+async function runBuyerSearch(product,countries,automatic){
+ const data=await workerPost('/discover-buyers',makeBuyerPayload(product,countries));
+ const results=Array.isArray(data.results)?data.results:[];
+ let saved=0,duplicates=0,skipped=0,errors=0;
+ const details=[];
+
+ for(const r of results){
+  try{
+   const outcome=await saveBuyerAssessment(r,product,countries,automatic);
+   if(outcome.saved){saved++;details.push(outcome.name+' ('+outcome.score+'/100)');}
+   else if(outcome.duplicate)duplicates++;
+   else skipped++;
+  }catch(error){
+   errors++;
+   details.push('A prospect could not be saved: '+error.message);
+  }
+ }
+ return {data,results,saved,duplicates,skipped,errors,details};
+}
+
+// AUTOMATIC SEARCH AFTER A PRODUCT IS SAVED
+async function runAutomaticBuyerDiscovery(product){
+ if(automaticBuyerSearchRunning){
+  showBuyerNotification('Another buyer search is already running. The new product has been saved; run its buyer search manually from Discover buyers.','info');
+  return;
+ }
+ automaticBuyerSearchRunning=true;
+ const status=document.getElementById('autoBuyerStatus');
+ status.textContent='Searching for potential buyers for '+product.name+'…';
+ try{
+  const outcome=await runBuyerSearch(product,DEFAULT_BUYER_COUNTRIES,true);
+  await refresh();
+
+  const message='Automatic buyer search completed for "'+product.name+'". '+
+   outcome.results.length+' prospects assessed; '+outcome.saved+' new prospects saved; '+
+   outcome.duplicates+' already in your register; '+outcome.skipped+' low-priority or incomplete results not saved.';
+
+  showBuyerNotification(message,'info');
+  log(message);
+  status.textContent=message;
+
+  if(outcome.saved){
+   const names=outcome.details.slice(0,5).join('; ');
+   document.getElementById('autoBuyerStatus').textContent=message+(names?' Saved: '+names:'');
+  }
+ }catch(error){
+  const message='Product "'+product.name+'" was saved, but automatic buyer discovery failed: '+error.message+
+   '. You can retry from Discover buyers.';
+  showBuyerNotification(message,'error');
+  status.textContent=message;
+  log('Automatic buyer discovery failed for '+product.name+': '+error.message);
+ }finally{
+  automaticBuyerSearchRunning=false;
+ }
+}
+
+// MANUAL BUYER DISCOVERY
+function renderDiscoveryProductSelect(){
+ let s=document.getElementById('discoveryProduct');
+ let old=s.value;
+ s.innerHTML=db.products.map(x=>
+  `<option value="${esc(x.id)}">${esc(x.name)} — ${esc(x.condition)}</option>`
+ ).join('');
+ if(!db.products.length)s.innerHTML='<option value="">Add a product first</option>';
+ else if(db.products.some(x=>x.id===old))s.value=old;
+}
+function productForDiscovery(){
+ return db.products.find(x=>x.id===document.getElementById('discoveryProduct').value);
+}
+
+async function discoverBuyers(){
+ const button=document.getElementById('discoverBtn');
+ const status=document.getElementById('discoveryStatus');
+ const summary=document.getElementById('discoverySummary');
+ const results=document.getElementById('discoveryResults');
+ const product=productForDiscovery();
+
+ if(!product){
+  status.textContent='Please add a product in the Products section first.';
+  return;
+ }
+ let countries=document.getElementById('discoveryCountries').value
+  .split(/[,;\n]/).map(x=>x.trim()).filter(Boolean).slice(0,3);
+ if(!countries.length){
+  status.textContent='Enter at least one target country.';
+  return;
+ }
+
+ button.disabled=true;
+ button.textContent='Searching…';
+ status.textContent='Searching public websites and assessing possible buyers. Please wait.';
+ summary.innerHTML='';results.innerHTML='';
+
+ try{
+  const outcome=await runBuyerSearch(product,countries,false);
+  discoveredResults=outcome.results;
+
+  summary.innerHTML=`
+   <div class="panel">
+    <h3>Search report</h3>
+    <p class="muted">Searches performed: ${esc(outcome.data.searches_performed??'Not supplied')}</p>
+    <p class="muted">Unique search results: ${esc(outcome.data.candidates_found??outcome.results.length)}</p>
+    <p class="muted">Companies assessed: ${esc(outcome.data.candidates_assessed??outcome.results.length)}</p>
+    <p class="muted">New prospects saved automatically by this manual search: ${outcome.saved}</p>
+    <p class="small">${esc(outcome.data.warning||'Search results are prospects, not confirmed buyers.')}</p>
+   </div>`;
+  renderDiscoveryResults();
+  await refresh();
+  status.textContent=outcome.results.length
+   ?'Research complete. New eligible prospects have been saved. Review each result below.'
+   :'The search completed, but no assessable company results were found.';
+ }catch(error){
+  status.textContent='Search error: '+error.message;
+  status.className='statusline dangertext';
+ }finally{
+  button.disabled=false;
+  button.textContent='Search for international buyers';
+ }
+}
+
+function renderDiscoveryResults(){
+ const el=document.getElementById('discoveryResults');
+ if(!discoveredResults.length){
+  el.innerHTML='<div class="empty">No results to display.</div>';
+  return;
+ }
+ el.innerHTML=discoveredResults.map((r)=>{
+  const b=r.buyer||r.company||{};
+  const alreadySaved=buyerDuplicate(b);
+  return `
+   <div class="item">
+    <div class="row between">
+     <strong class="result-title">${esc(b.company_name||r.source_title||'Company')}</strong>
+     <span class="result-score">${esc(r.total_score??'—')}/100</span>
+    </div>
+    <p>${esc(r.company_type||'Company type not established')}</p>
+    <span class="pill">${esc(r.recommendation||'UNASSESSED')}</span>
+    <span class="pill">Confidence: ${esc(r.confidence||'LOW')}</span>
+    <p><b>Website / evidence:</b><br>
+     ${safeUrl(b.website)?`<a href="${esc(safeUrl(b.website))}" target="_blank" rel="noopener noreferrer">${esc(b.website)}</a>`:'No website link supplied'}
+    </p>
+    <p><b>Search evidence:</b> ${esc(listText(r.evidence_summary)||'No specific evidence summary returned.')}</p>
+    <p><b>Missing information:</b> ${esc(listText(r.missing_information)||'Not specified')}</p>
+    <p><b>Risk flags:</b> ${esc(listText(r.risk_flags)||'None reported by the assessment')}</p>
+    <p><b>Assessment:</b> ${esc(r.reason||'No additional explanation.')}</p>
+    <p class="small">Source: ${esc(r.source_title||'Public web search')} ${r.source_date?'· Date: '+esc(r.source_date):''}</p>
+    <p class="small">No current purchasing intention is confirmed by this search.</p>
+    ${alreadySaved
+     ?'<span class="pill">Already in your buyer register</span>'
+     :'<span class="pill">Not yet saved — use automatic assessment to review eligibility</span>'}
+   </div>`;
+ }).join('');
+}
+
 // SUPPLIER DISCOVERY
+function normalizeSupplierResults(data){
+ let rows=data.results||data.leads||data.suppliers||data.supplier_leads||[];
+ if(!Array.isArray(rows))rows=[];
+ return rows.map(item=>{
+  const r=item.lead||item.supplier||item;
+  return {
+   ...r,
+   source_url:r.source_url||r.url||item.source_url||item.url||'',
+   source_title:r.source_title||r.title||item.source_title||item.title||'',
+   supplier_name:r.supplier_name||r.company_name||r.company||'',
+   product_name:r.product_name||r.title||'',
+   image_urls:asArray(r.image_urls||r.images),
+   evidence_summary:asArray(r.evidence_summary||r.evidence),
+   missing_information:asArray(r.missing_information),
+   risk_flags:asArray(r.risk_flags)
+  };
+ });
+}
+
 async function discoverSuppliers(){
  const button=document.getElementById('discoverSuppliersBtn');
  const status=document.getElementById('supplierDiscoveryStatus');
@@ -571,7 +867,8 @@ async function discoverSuppliers(){
 
  try{
   const data=await workerPost('/discover-suppliers',{});
-  discoveredSupplierResults=Array.isArray(data.results)?data.results:[];
+  discoveredSupplierResults=normalizeSupplierResults(data);
+
   summary.innerHTML=`
    <div class="panel">
     <h3>Supplier search report</h3>
@@ -579,12 +876,13 @@ async function discoverSuppliers(){
     <p class="muted">Geographic scope: ${esc(data.country_scope||'Bangladesh nationwide')}</p>
     <p class="muted">Searches performed: ${esc(data.searches_performed??'Not supplied')}</p>
     <p class="muted">Raw search results: ${esc(data.raw_results_found??'Not supplied')}</p>
-    <p class="muted">Potential leads returned: ${esc(data.leads_returned??discoveredSupplierResults.length)}</p>
+    <p class="muted">Potential leads returned: ${discoveredSupplierResults.length}</p>
     <p class="small">${esc(data.warning||'These are unverified public research leads. Verify all details directly with the supplier.')}</p>
    </div>`;
+
   renderDiscoveredSupplierResults();
   status.textContent=discoveredSupplierResults.length
-   ?'Search completed. Review the evidence and save relevant leads.'
+   ?'Search completed. Review the results and save relevant leads.'
    :'The search completed but returned no supplier leads. Try again later.';
  }catch(error){
   status.textContent='Search error: '+error.message;
@@ -611,10 +909,11 @@ function renderDiscoveredSupplierResults(){
 
  el.innerHTML=discoveredSupplierResults.map((r,i)=>{
   const duplicate=supplierLeadDuplicate(r);
-  const images=Array.isArray(r.image_urls)?r.image_urls:[];
+  const images=asArray(r.image_urls);
   const imageHtml=images.slice(0,3).map(url=>{
-   if(!/^https?:\/\//i.test(String(url)))return '';
-   return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">View product image</a>`;
+   const link=safeUrl(url);
+   if(!link)return '';
+   return `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer">View product image</a>`;
   }).filter(Boolean).join(' · ');
 
   return `
@@ -627,19 +926,19 @@ function renderDiscoveredSupplierResults(){
     <p><b>Condition:</b> ${esc(r.condition||'Not stated')} · <b>Fabric:</b> ${esc(r.fabric_composition||r.fabric||'Not stated')}</p>
     <p><b>Sizes:</b> ${esc(r.sizes||'Not stated')} · <b>Colours:</b> ${esc(r.colours||'Not stated')}</p>
     <p><b>Public phone:</b> ${esc(r.public_phone||'Not found')} · <b>Public email:</b> ${esc(r.public_email||'Not found')}</p>
-    <p><b>Website:</b> ${r.website&&/^https?:\/\//i.test(r.website)?`<a href="${esc(r.website)}" target="_blank" rel="noopener noreferrer">${esc(r.website)}</a>`:esc(r.website||'Not found')}</p>
+    <p><b>Website:</b> ${safeUrl(r.website)?`<a href="${esc(safeUrl(r.website))}" target="_blank" rel="noopener noreferrer">${esc(r.website)}</a>`:esc(r.website||'Not found')}</p>
     <div class="evidence">
      <p><b>Evidence:</b> ${esc(listText(r.evidence_summary)||'No evidence summary supplied.')}</p>
      <p><b>Missing information:</b> ${esc(listText(r.missing_information)||'Not specified')}</p>
      <p><b>Risk flags:</b> ${esc(listText(r.risk_flags)||'None supplied')}</p>
      <p><b>Confidence:</b> ${esc(r.confidence||'Not stated')}</p>
     </div>
-    <p><b>Source:</b> ${r.source_url&&/^https?:\/\//i.test(r.source_url)?`<a href="${esc(r.source_url)}" target="_blank" rel="noopener noreferrer">${esc(r.source_title||r.source_url)}</a>`:esc(r.source_title||'Source URL not supplied')}</p>
+    <p><b>Source:</b> ${safeUrl(r.source_url)?`<a href="${esc(safeUrl(r.source_url))}" target="_blank" rel="noopener noreferrer">${esc(r.source_title||r.source_url)}</a>`:esc(r.source_title||'Source URL not supplied')}</p>
     <p class="small">Source date: ${esc(r.source_date||'Not supplied')} · Research source: ${esc(r.research_source||'Public web search')}</p>
     ${imageHtml?`<p class="small">Images: ${imageHtml}</p>`:''}
     ${duplicate
      ?'<span class="pill">Already saved in Supplier Product Leads</span>'
-     :r.source_url
+     :safeUrl(r.source_url)
       ?`<button onclick="saveDiscoveredSupplierLead(${i},this)">Save supplier product lead</button>`
       :'<span class="pill">Cannot save: source URL missing</span>'}
    </div>`;
@@ -648,17 +947,16 @@ function renderDiscoveredSupplierResults(){
 
 async function saveDiscoveredSupplierLead(index,button){
  const r=discoveredSupplierResults[index];
- if(!r||!r.source_url){alert('This result has no source URL and cannot be saved safely.');return}
+ if(!r||!safeUrl(r.source_url)){alert('This result has no valid source URL and cannot be saved safely.');return}
  if(supplierLeadDuplicate(r)){alert('This source is already in your Supplier Product Leads register.');return}
-
  if(button){button.disabled=true;button.textContent='Saving…'}
 
  const record={
   user_id:currentUser.id,
-  source_url:String(r.source_url),
+  source_url:safeUrl(r.source_url),
   source_title:r.source_title||null,
   supplier_name:r.supplier_name||null,
-  website:r.website||null,
+  website:safeUrl(r.website)||null,
   public_phone:r.public_phone||null,
   public_email:r.public_email||null,
   product_name:r.product_name||null,
@@ -670,16 +968,16 @@ async function saveDiscoveredSupplierLead(index,button){
   condition:r.condition||null,
   fabric:r.fabric||null,
   fabric_composition:r.fabric_composition||null,
-  sizes:r.sizes||null,
-  colours:r.colours||null,
-  image_urls:Array.isArray(r.image_urls)?r.image_urls:[],
+  sizes:r.sizes==null?null:String(r.sizes),
+  colours:r.colours==null?null:String(r.colours),
+  image_urls:asArray(r.image_urls),
   source_date:r.source_date||null,
   research_source:r.research_source||'Tavily public web search',
   research_status:'New',
   confidence:r.confidence||null,
-  evidence_summary:Array.isArray(r.evidence_summary)?r.evidence_summary:[],
-  missing_information:Array.isArray(r.missing_information)?r.missing_information:[],
-  risk_flags:Array.isArray(r.risk_flags)?r.risk_flags:[],
+  evidence_summary:asArray(r.evidence_summary),
+  missing_information:asArray(r.missing_information),
+  risk_flags:asArray(r.risk_flags),
   raw_evidence:r.raw_evidence??r,
   notes:null,
   updated_at:new Date().toISOString()
@@ -690,7 +988,6 @@ async function saveDiscoveredSupplierLead(index,button){
    .upsert(record,{onConflict:'user_id,source_url'})
    .select()
    .single();
-
   if(result.error)throw result.error;
 
   log('Supplier product lead saved: '+(record.product_name||record.supplier_name||record.source_url));
@@ -738,10 +1035,10 @@ function renderSupplierLeads(){
 
  el.innerHTML=leads.map(x=>{
   const uploaded=x.research_status==='Uploaded to Products'||!!x.uploaded_product_id;
-  const images=Array.isArray(x.image_urls)?x.image_urls:[];
+  const images=asArray(x.image_urls);
   const imageLinks=images.slice(0,4).map(url=>{
-   if(!/^https?:\/\//i.test(String(url)))return '';
-   return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Image</a>`;
+   const link=safeUrl(url);
+   return link?`<a href="${esc(link)}" target="_blank" rel="noopener noreferrer">Image</a>`:'';
   }).filter(Boolean).join(' · ');
 
   return `
@@ -756,14 +1053,14 @@ function renderSupplierLeads(){
     <p><b>Condition:</b> ${esc(x.condition||'Not stated')} · <b>Fabric:</b> ${esc(x.fabric_composition||x.fabric||'Not stated')}</p>
     <p><b>Sizes:</b> ${esc(x.sizes||'Not stated')} · <b>Colours:</b> ${esc(x.colours||'Not stated')}</p>
     <p><b>Public phone:</b> ${esc(x.public_phone||'Not found')} · <b>Public email:</b> ${esc(x.public_email||'Not found')}</p>
-    <p><b>Website:</b> ${x.website&&/^https?:\/\//i.test(x.website)?`<a href="${esc(x.website)}" target="_blank" rel="noopener noreferrer">${esc(x.website)}</a>`:esc(x.website||'Not found')}</p>
+    <p><b>Website:</b> ${safeUrl(x.website)?`<a href="${esc(safeUrl(x.website))}" target="_blank" rel="noopener noreferrer">${esc(x.website)}</a>`:esc(x.website||'Not found')}</p>
     <div class="evidence">
      <p><b>Evidence:</b> ${esc(listText(x.evidence_summary)||'No evidence supplied.')}</p>
      <p><b>Missing information:</b> ${esc(listText(x.missing_information)||'Not specified')}</p>
      <p><b>Risk flags:</b> ${esc(listText(x.risk_flags)||'None supplied')}</p>
      <p><b>Confidence:</b> ${esc(x.confidence||'Not stated')}</p>
     </div>
-    <p><b>Original source:</b> ${x.source_url&&/^https?:\/\//i.test(x.source_url)?`<a href="${esc(x.source_url)}" target="_blank" rel="noopener noreferrer">${esc(x.source_title||x.source_url)}</a>`:esc(x.source_title||'Not supplied')}</p>
+    <p><b>Original source:</b> ${safeUrl(x.source_url)?`<a href="${esc(safeUrl(x.source_url))}" target="_blank" rel="noopener noreferrer">${esc(x.source_title||x.source_url)}</a>`:esc(x.source_title||'Not supplied')}</p>
     <p class="small">Discovered: ${x.discovered_at?new Date(x.discovered_at).toLocaleString():'Not recorded'} · Source date: ${esc(x.source_date||'Not supplied')}</p>
     ${imageLinks?`<p class="small">Product images: ${imageLinks}</p>`:''}
     ${x.notes?`<p><b>Your notes:</b> ${esc(x.notes)}</p>`:''}
@@ -772,14 +1069,14 @@ function renderSupplierLeads(){
      ${uploaded
       ?'<span class="pill">Product already uploaded</span>'
       :`<select id="leadStatus_${esc(x.id)}" aria-label="Lead status">
-        ${['New','Contacted','Negotiating','Agreement reached','Uploaded to Products','Rejected'].map(s=>`<option ${x.research_status===s?'selected':''}>${s}</option>`).join('')}
+        ${['New','Contacted','Negotiating','Agreement reached','Rejected'].map(s=>`<option ${x.research_status===s?'selected':''}>${s}</option>`).join('')}
        </select>
        <button class="secondary" onclick="updateSupplierLeadStatus('${esc(x.id)}')">Update status</button>`}
     </div>
     ${!uploaded&&x.research_status==='Agreement reached'
       ?`<div class="evidence">
-        <p class="success"><b>Supplier agreement status selected.</b> Before uploading, make sure you have personally verified the offer and obtained the supplier's permission to market it.</p>
-        <button onclick="uploadSupplierLeadToProducts('${esc(x.id)}',this)">Upload to Products</button>
+        <p class="success"><b>Supplier agreement status selected.</b> Make sure you have personally verified the offer and obtained permission to market it.</p>
+        <button onclick="uploadSupplierLeadToProducts('${esc(x.id)}',this)">Upload to Products and find buyers</button>
        </div>`
       :''}
    </div>`;
@@ -790,11 +1087,8 @@ async function updateSupplierLeadStatus(leadId){
  const select=document.getElementById('leadStatus_'+leadId);
  if(!select)return;
  const status=select.value;
- const allowed=['New','Contacted','Negotiating','Agreement reached','Uploaded to Products','Rejected'];
+ const allowed=['New','Contacted','Negotiating','Agreement reached','Rejected'];
  if(!allowed.includes(status)){alert('Invalid status.');return}
- if(status==='Uploaded to Products'){
-  alert('Use the Upload to Products button after selecting Agreement reached.');return;
- }
  const r=await sb.from('gtsa_supplier_leads')
   .update({research_status:status,updated_at:new Date().toISOString()})
   .eq('id',leadId);
@@ -813,7 +1107,7 @@ async function uploadSupplierLeadToProducts(leadId,button){
   alert('This lead has already been uploaded.');return;
  }
  if(!lead.supplier_name||!lead.product_name){
-  alert('The supplier name and product name are required before uploading. Verify and update the lead information first.');
+  alert('The supplier name and product name are required before uploading. Verify the lead information first.');
   return;
  }
  const confirmed=confirm(
@@ -823,15 +1117,12 @@ async function uploadSupplierLeadToProducts(leadId,button){
   'Continue only if you have personally verified the offer and obtained the supplier’s agreement and permission to market it.'
  );
  if(!confirmed)return;
-
  if(button){button.disabled=true;button.textContent='Uploading…'}
 
  try{
-  // Reuse an existing supplier record with the same company name when possible.
   let supplier=db.suppliers.find(s=>
    s.name&&s.name.trim().toLowerCase()===lead.supplier_name.trim().toLowerCase()
   );
-
   let supplierId=supplier?.id;
 
   if(!supplierId){
@@ -839,19 +1130,17 @@ async function uploadSupplierLeadToProducts(leadId,button){
     company_name:lead.supplier_name,
     phone:lead.public_phone||null,
     email:lead.public_email||null,
-    website:lead.website||null,
+    website:safeUrl(lead.website)||null,
     supplier_type:'Stocklot trader',
     source_url:lead.source_url||null,
     verification_status:'Contacted',
     notes:'Created from Supplier Product Leads after user confirmed supplier agreement. Original source: '+(lead.source_url||'Not supplied')
    }).select('id').single();
-
    if(supplierInsert.error)throw new Error('Supplier record could not be created: '+supplierInsert.error.message);
    supplierId=supplierInsert.data.id;
   }
 
   const parsed=parsePrice(lead.price||'');
-  const quantity=numericQuantity(lead.quantity);
   const productNotes=[
    'Uploaded from Supplier Product Leads after user confirmation of supplier agreement.',
    'Original source title: '+(lead.source_title||'Not supplied'),
@@ -870,7 +1159,7 @@ async function uploadSupplierLeadToProducts(leadId,button){
    product_type:lead.product_type||lead.product_name,
    condition:lead.condition||'Not verified',
    fabric_composition:lead.fabric_composition||lead.fabric||null,
-   quantity:quantity,
+   quantity:numericQuantity(lead.quantity),
    unit_price:parsed.amount,
    currency:lead.currency||parsed.currency,
    minimum_order_quantity:null,
@@ -896,181 +1185,39 @@ async function uploadSupplierLeadToProducts(leadId,button){
 
   log('Supplier lead uploaded to Products: '+lead.product_name);
   await refresh();
-  alert('The supplier and product records have been added to your active catalogue. Review the product details before offering them to buyers.');
+  alert('The supplier and product records have been added to your active catalogue. Automatic buyer discovery will now start.');
+  const product={
+   id:productInsert.data.id,name:lead.product_name,
+   condition:lead.condition||'Not verified',
+   fabric:lead.fabric_composition||lead.fabric,
+   quantity:numericQuantity(lead.quantity),
+   price:lead.price, sizes:lead.sizes, colours:lead.colours
+  };
+  runAutomaticBuyerDiscovery(product);
  }catch(error){
   alert('Upload error: '+error.message);
-  if(button){button.disabled=false;button.textContent='Upload to Products'}
+  if(button){button.disabled=false;button.textContent='Upload to Products and find buyers'}
  }
 }
 
-// BUYER DISCOVERY
-function renderDiscoveryProductSelect(){
- let s=document.getElementById('discoveryProduct');
- let old=s.value;
- s.innerHTML=db.products.map(x=>
-  `<option value="${esc(x.id)}">${esc(x.name)} — ${esc(x.condition)}</option>`
- ).join('');
- if(!db.products.length)s.innerHTML='<option value="">Add a product first</option>';
- else if(db.products.some(x=>x.id===old))s.value=old;
-}
-function productForDiscovery(){
- return db.products.find(x=>x.id===document.getElementById('discoveryProduct').value);
-}
-
-async function discoverBuyers(){
- const button=document.getElementById('discoverBtn');
- const status=document.getElementById('discoveryStatus');
- const summary=document.getElementById('discoverySummary');
- const results=document.getElementById('discoveryResults');
- const product=productForDiscovery();
-
- if(!product){
-  status.textContent='Please add a product in the Products section first.';
-  return;
- }
- let countries=document.getElementById('discoveryCountries').value
-  .split(/[,;\n]/).map(x=>x.trim()).filter(Boolean).slice(0,3);
- if(!countries.length){
-  status.textContent='Enter at least one target country.';
-  return;
- }
-
- button.disabled=true;
- button.textContent='Searching…';
- status.textContent='Searching public websites and assessing possible buyers. This may take a little time.';
- summary.innerHTML='';results.innerHTML='';
-
- try{
-  const payload={
-   product:{
-    product_name:product.name,
-    product_type:product.name,
-    condition:product.condition,
-    fabric:product.fabric,
-    fabric_composition:product.fabric,
-    quantity:product.quantity,
-    unit_price:product.price,
-    minimum_order_quantity:product.moq,
-    sizes:product.sizes,
-    colours:product.colours,
-    shipping_terms:product.shipping
-   },
-   countries
-  };
-  const data=await workerPost('/discover-buyers',payload);
-  discoveredResults=data.results||[];
-
-  summary.innerHTML=`
-   <div class="panel">
-    <h3>Search report</h3>
-    <p class="muted">Searches performed: ${esc(data.searches_performed)}</p>
-    <p class="muted">Unique search results: ${esc(data.candidates_found)}</p>
-    <p class="muted">Companies assessed by AI: ${esc(data.candidates_assessed)}</p>
-    <p class="small">${esc(data.warning||'Search results are prospects, not confirmed buyers.')}</p>
-   </div>`;
-  renderDiscoveryResults();
-  status.textContent=discoveredResults.length
-   ?'Research complete. Review each result before saving it.'
-   :'The search completed, but no assessable company results were found.';
- }catch(error){
-  status.textContent='Search error: '+error.message;
-  status.className='statusline dangertext';
- }finally{
-  button.disabled=false;
-  button.textContent='Search for international buyers';
- }
-}
-
-function renderDiscoveryResults(){
- const el=document.getElementById('discoveryResults');
- if(!discoveredResults.length){
-  el.innerHTML='<div class="empty">No results to display.</div>';
-  return;
- }
- el.innerHTML=discoveredResults.map((r,i)=>{
-  const b=r.buyer||{};
-  const alreadySaved=db.buyers.some(x=>
-   (x.website&&b.website&&x.website.toLowerCase()===b.website.toLowerCase())||
-   (x.name&&b.company_name&&x.name.toLowerCase()===b.company_name.toLowerCase())
-  );
-  return `
-   <div class="item">
-    <div class="row between">
-     <strong class="result-title">${esc(b.company_name||r.source_title||'Company')}</strong>
-     <span class="result-score">${esc(r.total_score)}/100</span>
-    </div>
-    <p>${esc(r.company_type||'Company type not established')}</p>
-    <span class="pill">${esc(r.recommendation||'UNASSESSED')}</span>
-    <span class="pill">Confidence: ${esc(r.confidence||'LOW')}</span>
-    <p><b>Website / evidence:</b><br>
-     ${b.website?`<a href="${esc(b.website)}" target="_blank" rel="noopener noreferrer">${esc(b.website)}</a>`:'No website link supplied'}
-    </p>
-    <p><b>Search evidence:</b> ${esc(listText(r.evidence_summary)||'No specific evidence summary returned.')}</p>
-    <p><b>Missing information:</b> ${esc(listText(r.missing_information)||'Not specified')}</p>
-    <p><b>Risk flags:</b> ${esc(listText(r.risk_flags)||'None reported by the assessment')}</p>
-    <p><b>Assessment:</b> ${esc(r.reason||'No additional explanation.')}</p>
-    <p class="small">Source: ${esc(r.source_title||'Public web search')} ${r.source_date?'· Date: '+esc(r.source_date):''}</p>
-    <p class="small">No purchasing contact or current buying intention has been confirmed by this search.</p>
-    ${alreadySaved
-     ?'<span class="pill">Already in your buyer register</span>'
-     :`<button onclick="saveDiscoveredBuyer(${i})">Save this prospect</button>`}
-   </div>`;
- }).join('');
-}
-
-async function saveDiscoveredBuyer(index){
- const r=discoveredResults[index];
- if(!r||!r.buyer){alert('This research result is unavailable.');return}
- const b=r.buyer;
- const duplicate=db.buyers.some(x=>
-  (x.website&&b.website&&x.website.toLowerCase()===b.website.toLowerCase())||
-  (x.name&&b.company_name&&x.name.toLowerCase()===b.company_name.toLowerCase())
- );
- if(duplicate){alert('This company appears to be already in your Buyers register.');return}
-
- const product=productForDiscovery();
- const productDescription=product
-  ?`Potential product fit researched for: ${product.name}. Condition: ${product.condition||'Not stated'}. Fabric: ${product.fabric||'Not stated'}.`
-  :'Product details not available.';
-
- const notes=[
-  'DISCOVERED THROUGH PUBLIC WEB SEARCH',
-  'AI assessment score: '+r.total_score+'/100',
-  'Recommendation: '+r.recommendation,
-  'AI confidence: '+r.confidence,
-  'Assessment: '+(r.reason||''),
-  'Evidence summary: '+listText(r.evidence_summary),
-  'Missing information: '+listText(r.missing_information),
-  'Risk flags: '+listText(r.risk_flags),
-  'Search source title: '+(r.source_title||''),
-  'Source date: '+(r.source_date||'Not supplied'),
-  'Search market: '+document.getElementById('discoveryCountries').value,
-  'Research date: '+new Date().toISOString(),
-  'Important: Search prospect only. Current buying interest and business identity require verification.'
- ].join('\n');
-
- const record={
-  company_name:b.company_name||r.source_title||'Unidentified company',
-  country:'Not verified',
-  website:b.website||null,
-  public_email:null,
-  contact_person:null,
-  buyer_type:r.company_type||'Unverified garment trade prospect',
-  research_confidence:'C',
-  buying_interest:'Not contacted',
-  contact_status:'not_contacted',
-  product_interests:productDescription,
-  evidence_url:b.evidence_url||b.website||null,
-  notes,
-  opt_out:false
- };
- const result=await sb.from('gtsa_buyers').insert(record);
- if(result.error){alert('Could not save prospect: '+result.error.message);return}
- log('Research prospect saved: '+record.company_name);
- alert('Prospect saved in your Buyers register. Its country and contact details remain unverified.');
- await refresh();
- renderDiscoveryResults();
-}
+// MANUAL BUYER ENTRY
+document.getElementById('bf').addEventListener('submit',async e=>{
+ e.preventDefault();
+ let x=Object.fromEntries(new FormData(e.target));
+ let ev=x.evidence.startsWith('A')?'A':x.evidence.startsWith('B')?'B':'C';
+ let interest=x.interest;
+ let r=await sb.from('gtsa_buyers').insert({
+  company_name:x.name,country:x.country,website:safeUrl(x.website)||null,
+  public_email:x.email||null,contact_person:x.contact||null,
+  buyer_type:x.type||null,research_confidence:ev,
+  buying_interest:interest,
+  contact_status:interest==='Not contacted'?'not_contacted':'contacted',
+  product_interests:x.notes||null,evidence_url:null,
+  opt_out:interest==='Opted out'
+ });
+ if(r.error){alert('Could not save buyer: '+r.error.message);return}
+ log('Buyer added: '+x.name);e.target.reset();hideForm('buyerForm');await refresh();
+});
 
 // DISPLAY FUNCTIONS
 function supplierName(key){
@@ -1109,10 +1256,19 @@ async function renderProducts(){
    <p>Supplier: ${esc(supplierName(x.supplier))} · Price: ${esc(x.price||'Not stated')} · MOQ: ${esc(x.moq||'Not stated')}</p>
    <p>Sizes: ${esc(x.sizes)} · Colours: ${esc(x.colours)} · ${esc(x.shipping)}</p>
    <p>${esc(x.notes)}</p>
+   <button class="secondary" onclick="searchBuyersForExistingProduct('${esc(x.id)}')">Find buyers for this product</button>
    <button class="danger" onclick="removeItem('products','${esc(x.id)}')">Delete</button>
   </div>`);
  }
  document.getElementById('productList').innerHTML=html.join('')||'<div class="empty">No products recorded yet.</div>';
+}
+
+async function searchBuyersForExistingProduct(productId){
+ const product=db.products.find(x=>x.id===productId);
+ if(!product)return;
+ openView('discovery');
+ document.getElementById('discoveryProduct').value=productId;
+ await discoverBuyers();
 }
 
 function renderBuyers(){
