@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -15,6 +14,7 @@ header h1{font-size:21px;margin:0 0 3px}
 header p{margin:0;color:var(--muted);font-size:13px}
 .wrap{max-width:1100px;margin:auto;padding:14px}
 .notice{background:#183329;border:1px solid #2c6b56;color:#c9f6e7;border-radius:12px;padding:11px 13px;font-size:13px;margin-bottom:14px}
+.notice.warning{background:#392d1b;border-color:#72552a;color:#ffe5ad}
 nav{display:flex;gap:7px;overflow-x:auto;padding:4px 0 13px;position:sticky;top:0;background:var(--bg);z-index:5}
 nav button{white-space:nowrap;border:1px solid var(--line);background:var(--panel);color:var(--muted);padding:9px 13px;border-radius:10px;font-weight:600}
 nav button.active{background:var(--accent);color:#092018;border-color:var(--accent)}
@@ -55,6 +55,10 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
 .success{color:#a9f0ce}
 .result-score{font-size:22px;font-weight:800;color:var(--accent)}
 .result-title{overflow-wrap:anywhere}
+a{color:var(--blue);overflow-wrap:anywhere}
+.lead-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.lead-actions select{max-width:230px;margin:0}
+.evidence{background:#0c1624;border:1px solid var(--line);border-radius:8px;padding:9px;margin:8px 0}
 @media(min-width:700px){
  .cards{grid-template-columns:repeat(4,minmax(0,1fr))}
  .wrap{padding:22px}
@@ -95,12 +99,14 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
 </div>
 
 <div class="notice">
- <b>Cloud-connected version:</b> Supplier, product, buyer and email-draft records are saved to your Supabase project. Buyer discovery now uses public web search and AI assessment. Prospects are not confirmed buyers. Email sending and social-media publishing are not connected.
+ <b>Cloud-connected version:</b> Supplier, product, buyer, supplier-lead and email-draft records are saved to your Supabase account. Supplier discovery searches public sources across Bangladesh. Buyer discovery uses public web search and AI assessment. Prospects are not confirmed buyers. Emails are prepared as drafts only; automatic sending and social-media publishing are not connected.
 </div>
 
 <nav id="tabs">
  <button class="active" data-view="dashboard">Dashboard</button>
  <button data-view="suppliers">Suppliers</button>
+ <button data-view="supplierDiscovery">Discover suppliers</button>
+ <button data-view="supplierLeads">Supplier Product Leads</button>
  <button data-view="products">Products</button>
  <button data-view="discovery">Discover buyers</button>
  <button data-view="buyers">Buyers</button>
@@ -113,21 +119,24 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
  <h2>Business overview</h2>
  <div class="cards">
   <div class="card"><div class="muted">Suppliers</div><div class="metric" id="mSup">0</div></div>
-  <div class="card"><div class="muted">Products</div><div class="metric" id="mProd">0</div></div>
+  <div class="card"><div class="muted">Active products</div><div class="metric" id="mProd">0</div></div>
   <div class="card"><div class="muted">Buyer prospects</div><div class="metric" id="mBuy">0</div></div>
   <div class="card"><div class="muted">Potential matches</div><div class="metric" id="mMatch">0</div></div>
+  <div class="card"><div class="muted">Supplier product leads</div><div class="metric" id="mLeads">0</div></div>
+  <div class="card"><div class="muted">Awaiting supplier agreement</div><div class="metric" id="mNegotiating">0</div></div>
  </div>
  <div class="panel">
-  <h3>How to start</h3>
+  <h3>How to use the business workflow</h3>
   <ol class="muted">
-   <li>Add a supplier you find online or offline.</li>
-   <li>Add that supplier's actual stocklot product and specifications.</li>
-   <li>Use Discover buyers to research international companies.</li>
-   <li>Review the evidence and save relevant prospects.</li>
-   <li>Open Matching to see possible product–buyer matches.</li>
-   <li>Prepare an email draft and check every fact before sending.</li>
+   <li>Search for garment stocklots and surplus offers using Discover suppliers.</li>
+   <li>Review the public evidence and save useful findings in Supplier Product Leads.</li>
+   <li>Contact the supplier yourself and verify the actual stock, price, quantity and terms.</li>
+   <li>Update the lead status as discussions progress.</li>
+   <li>Only after reaching an agreement, change its status to Agreement reached and upload it to Products.</li>
+   <li>Use Discover buyers to research international companies for your active products.</li>
+   <li>Review buyer evidence, matching signals and email drafts before taking action.</li>
   </ol>
-  <p class="small">A prospect is not a confirmed buyer. Verify the company, contact and current buying interest yourself.</p>
+  <p class="small">Discovered supplier offers are not verified inventory. A discovered company is not automatically a supplier, and a buyer prospect is not a confirmed buyer.</p>
  </div>
  <div class="panel" style="margin-top:12px">
   <h3>Recent activity</h3>
@@ -159,6 +168,42 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
  <div id="supplierList"></div>
 </section>
 
+<section id="supplierDiscovery" class="view">
+ <h2>Bangladesh supplier and stocklot discovery</h2>
+ <div class="panel">
+  <p class="muted">Search public websites for Bangladesh garment stocklots, export surplus, cancelled orders, factory excess stock and wholesale clothing offers. The search covers Bangladesh nationwide; it is not restricted to a particular district.</p>
+  <div class="notice warning">Search findings are unverified leads, not confirmed available inventory. You must contact suppliers and verify the products before offering them to buyers.</div>
+  <p class="small">The search uses the connected Cloudflare Worker and Tavily. The current Worker performs a maximum of three public searches per request. Searches may not find every offer on the internet.</p>
+  <button id="discoverSuppliersBtn" onclick="discoverSuppliers()">Search Bangladesh for garment stocklots</button>
+  <p id="supplierDiscoveryStatus" class="statusline" aria-live="polite">Ready to search public sources across Bangladesh.</p>
+ </div>
+ <div id="supplierDiscoverySummary"></div>
+ <div id="supplierDiscoveryResults"></div>
+</section>
+
+<section id="supplierLeads" class="view">
+ <div class="row between">
+  <h2>Supplier Product Leads</h2>
+  <button class="secondary" onclick="loadSupplierLeads()">Refresh leads</button>
+ </div>
+ <p class="muted">This is your private research register. These offers are separate from the active Products catalogue. Suppliers cannot see this register or your buyer information.</p>
+ <div class="panel">
+  <label>Filter by lead status</label>
+  <select id="leadStatusFilter" onchange="renderSupplierLeads()">
+   <option value="">All statuses</option>
+   <option>New</option>
+   <option>Contacted</option>
+   <option>Negotiating</option>
+   <option>Agreement reached</option>
+   <option>Uploaded to Products</option>
+   <option>Rejected</option>
+  </select>
+  <label>Search supplier leads</label>
+  <input id="leadSearch" class="search" placeholder="Supplier, product, fabric, source..." oninput="renderSupplierLeads()">
+ </div>
+ <div id="supplierLeadList"></div>
+</section>
+
 <section id="products" class="view">
  <div class="row between"><h2>Product catalogue</h2><button onclick="showForm('productForm')">+ Add product</button></div>
  <div id="productForm" class="panel" hidden>
@@ -186,24 +231,18 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
  <div id="productList"></div>
 </section>
 
-<!-- NEW BUYER DISCOVERY SECTION -->
 <section id="discovery" class="view">
  <h2>International buyer discovery</h2>
  <div class="panel">
   <p class="muted">Search public websites for companies that may purchase garment stocklots, surplus clothing or wholesale apparel. The AI will assess the search evidence. It cannot confirm current buying interest.</p>
-
   <label>Select a product from your catalogue</label>
   <select id="discoveryProduct"></select>
-
   <label>Target countries (separate countries with commas)</label>
   <input id="discoveryCountries" value="United Kingdom, Germany, Netherlands" placeholder="United Kingdom, Germany, Netherlands">
-
   <p class="small">Each search uses one Tavily credit. A maximum of three country searches and five AI assessments are performed per request.</p>
-
   <button id="discoverBtn" onclick="discoverBuyers()">Search for international buyers</button>
   <p id="discoveryStatus" class="statusline" aria-live="polite">Choose a product and target markets to begin.</p>
  </div>
-
  <div id="discoverySummary"></div>
  <div id="discoveryResults"></div>
 </section>
@@ -261,30 +300,55 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
  </div>
 </section>
 
-<footer>Global Trade Sales Assistant · Private working tool · Version 0.2 · Store only genuine, accurately described product and company information.</footer>
+<footer>Global Trade Sales Assistant · Private working tool · Version 0.3 · Store only genuine, accurately described product and company information.</footer>
 </div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// Existing Supabase project configuration.
 const SUPABASE_URL='https://fkgdpiwybthnujgkmxxb.supabase.co';
 const SUPABASE_ANON_KEY='sb_publishable_NyBWgoM_yZGrbWBfnb5woQ_SnELkNod';
 const WORKER_URL='https://global-trade-sales-api.maczone61.workers.dev';
 
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 let currentUser=null;
-let db={suppliers:[],products:[],buyers:[],emails:[],activity:[]};
+let db={suppliers:[],products:[],buyers:[],emails:[],supplierLeads:[],activity:[]};
 let discoveredResults=[];
+let discoveredSupplierResults=[];
 
-function blank(){return {suppliers:[],products:[],buyers:[],emails:[],activity:[]}}
-function id(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)}
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function sayAuth(t,kind=''){let e=document.getElementById('authMessage');e.textContent=t;e.className='statusline '+kind}
-function log(s){db.activity.unshift(new Date().toLocaleString()+' — '+s);db.activity=db.activity.slice(0,12)}
-function showForm(key){document.getElementById(key).hidden=false;if(key==='productForm')fillSupplierSelect()}
+function blank(){
+ return {suppliers:[],products:[],buyers:[],emails:[],supplierLeads:[],activity:[]};
+}
+function id(){
+ return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
+}
+function esc(s){
+ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function listText(v){
+ if(Array.isArray(v))return v.map(x=>String(x??'')).filter(Boolean).join(' · ');
+ if(v==null)return '';
+ return String(v);
+}
+function sayAuth(t,kind=''){
+ let e=document.getElementById('authMessage');
+ e.textContent=t;e.className='statusline '+kind;
+}
+function log(s){
+ db.activity.unshift(new Date().toLocaleString()+' — '+s);
+ db.activity=db.activity.slice(0,15);
+}
+function showForm(key){
+ document.getElementById(key).hidden=false;
+ if(key==='productForm')fillSupplierSelect();
+}
 function hideForm(key){document.getElementById(key).hidden=true}
-function setSignedIn(user){currentUser=user;document.getElementById('authPanel').classList.toggle('hidden',!!user);document.getElementById('appArea').classList.toggle('hidden',!user);document.getElementById('signedInAs').textContent=user?.email||''}
+function setSignedIn(user){
+ currentUser=user;
+ document.getElementById('authPanel').classList.toggle('hidden',!!user);
+ document.getElementById('appArea').classList.toggle('hidden',!user);
+ document.getElementById('signedInAs').textContent=user?.email||'';
+}
 
 async function authAction(mode){
  let email=document.getElementById('authEmail').value.trim();
@@ -292,26 +356,33 @@ async function authAction(mode){
  if(!email||!password){sayAuth('Enter your email address and password.','dangertext');return}
  if(password.length<8){sayAuth('Use a password with at least 8 characters.','dangertext');return}
  sayAuth(mode==='signup'?'Creating your account…':'Signing in…');
- let r=mode==='signup'?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+ let r=mode==='signup'
+  ?await sb.auth.signUp({email,password})
+  :await sb.auth.signInWithPassword({email,password});
  if(r.error){sayAuth(r.error.message,'dangertext');return}
- if(mode==='signup'&&!r.data.session){sayAuth('Account created. Check your email for a confirmation link, then return here and sign in.','success');return}
+ if(mode==='signup'&&!r.data.session){
+  sayAuth('Account created. Check your email for a confirmation link, then return here and sign in.','success');
+  return;
+ }
  if(r.data.user)await enterWorkspace(r.data.user);
 }
 
 async function enterWorkspace(user){
+ if(currentUser?.id===user.id&&document.getElementById('appArea').classList.contains('hidden')===false)return;
  setSignedIn(user);
  try{await loadCloudData();renderAll()}
  catch(e){alert('Could not load your cloud records: '+e.message)}
 }
 
 async function loadCloudData(){
- let [ss,pp,bb,ee]=await Promise.all([
+ let [ss,pp,bb,ee,ll]=await Promise.all([
   sb.from('gtsa_suppliers').select('*').order('created_at',{ascending:false}),
   sb.from('gtsa_products').select('*').order('created_at',{ascending:false}),
   sb.from('gtsa_buyers').select('*').order('created_at',{ascending:false}),
-  sb.from('gtsa_emails').select('*').order('created_at',{ascending:false})
+  sb.from('gtsa_emails').select('*').order('created_at',{ascending:false}),
+  sb.from('gtsa_supplier_leads').select('*').order('discovered_at',{ascending:false})
  ]);
- for(let r of [ss,pp,bb,ee])if(r.error)throw r.error;
+ for(let r of [ss,pp,bb,ee,ll])if(r.error)throw r.error;
 
  db.suppliers=ss.data.map(x=>({
   id:x.id,name:x.company_name,contact:x.contact_person,phone:x.phone,
@@ -341,9 +412,14 @@ async function loadCloudData(){
   id:x.id,buyer:x.recipient_email,product:'',subject:x.subject,
   body:x.message_body,date:x.created_at,buyerId:x.buyer_id,productId:x.product_id
  }));
+
+ db.supplierLeads=ll.data||[];
 }
 
-async function refresh(){await loadCloudData();renderAll()}
+async function refresh(){
+ await loadCloudData();
+ renderAll();
+}
 
 document.getElementById('signInBtn').addEventListener('click',()=>authAction('signin'));
 document.getElementById('signUpBtn').addEventListener('click',()=>authAction('signup'));
@@ -356,7 +432,7 @@ document.getElementById('signOutBtn').addEventListener('click',async()=>{
 
 sb.auth.onAuthStateChange((event,session)=>{
  if(event==='SIGNED_IN'&&session?.user)enterWorkspace(session.user);
- else if(event==='SIGNED_OUT')setSignedIn(null);
+ else if(event==='SIGNED_OUT'){db=blank();setSignedIn(null)}
 });
 
 (async()=>{
@@ -383,7 +459,8 @@ document.getElementById('sf').addEventListener('submit',async e=>{
   verification_status:x.status||'unverified',notes:x.notes||null
  });
  if(r.error){alert('Could not save supplier: '+r.error.message);return}
- log('Supplier added: '+x.name);e.target.reset();hideForm('supplierForm');await refresh();
+ log('Supplier added: '+x.name);
+ e.target.reset();hideForm('supplierForm');await refresh();
 });
 
 function fillSupplierSelect(){
@@ -405,14 +482,11 @@ document.getElementById('pf').addEventListener('submit',async e=>{
   if(up.error){alert('Photo upload failed: '+up.error.message+' You can remove the photo and save the product details.');return}
   photoPath=path;
  }
- let priceText=(x.price||'').trim(),currency='USD',amount=null;
- let m=priceText.match(/([A-Z]{3})\s*([0-9]+(?:\.[0-9]+)?)/i);
- if(m){currency=m[1].toUpperCase();amount=Number(m[2])}
- else if(/^\d+(?:\.\d+)?$/.test(priceText)){amount=Number(priceText)}
+ let parsed=parsePrice(x.price||'');
  let r=await sb.from('gtsa_products').insert({
   supplier_id:x.supplier,product_name:x.name,product_type:x.name,
   condition:x.condition,fabric_composition:x.fabric||null,
-  quantity:x.quantity?Number(x.quantity):null,unit_price:amount,currency,
+  quantity:x.quantity?Number(x.quantity):null,unit_price:parsed.amount,currency:parsed.currency,
   minimum_order_quantity:x.moq?parseInt(x.moq,10)||null:null,
   sizes:x.sizes||null,colours:x.colours||null,
   availability_status:x.availability||'available',
@@ -422,8 +496,22 @@ document.getElementById('pf').addEventListener('submit',async e=>{
   if(photoPath)await sb.storage.from('gtsa-product-photos').remove([photoPath]);
   alert('Could not save product: '+r.error.message);return;
  }
- log('Product added: '+x.name);f.reset();hideForm('productForm');await refresh();
+ log('Product added: '+x.name);
+ f.reset();hideForm('productForm');await refresh();
 });
+
+function parsePrice(value){
+ let t=String(value||'').trim(),currency='USD',amount=null;
+ let m=t.match(/([A-Z]{3})\s*([0-9]+(?:\.[0-9]+)?)/i);
+ if(m){currency=m[1].toUpperCase();amount=Number(m[2])}
+ else if(/^\d+(?:\.\d+)?$/.test(t)){amount=Number(t)}
+ return {currency,amount};
+}
+function numericQuantity(value){
+ if(value==null)return null;
+ let m=String(value).replace(/,/g,'').match(/\d+(?:\.\d+)?/);
+ return m?Number(m[0]):null;
+}
 
 // MANUAL BUYER ENTRY
 document.getElementById('bf').addEventListener('submit',async e=>{
@@ -444,7 +532,378 @@ document.getElementById('bf').addEventListener('submit',async e=>{
  log('Buyer added: '+x.name);e.target.reset();hideForm('buyerForm');await refresh();
 });
 
-// NEW: BUYER DISCOVERY
+// AUTHENTICATED WORKER REQUEST
+async function workerPost(endpoint,payload){
+ const {data:{session},error:sessionError}=await sb.auth.getSession();
+ if(sessionError||!session?.access_token){
+  throw new Error('Your login session has expired. Sign out and sign in again.');
+ }
+ const response=await fetch(WORKER_URL+endpoint,{
+  method:'POST',
+  headers:{
+   'Content-Type':'application/json',
+   'Authorization':'Bearer '+session.access_token
+  },
+  body:JSON.stringify(payload||{})
+ });
+ let data;
+ try{data=await response.json()}
+ catch{throw new Error('The research service returned an unreadable response.')}
+ if(!response.ok||!data.success){
+  throw new Error(data.error||('Research service returned HTTP '+response.status));
+ }
+ return data;
+}
+
+// SUPPLIER DISCOVERY
+async function discoverSuppliers(){
+ const button=document.getElementById('discoverSuppliersBtn');
+ const status=document.getElementById('supplierDiscoveryStatus');
+ const summary=document.getElementById('supplierDiscoverySummary');
+ const results=document.getElementById('supplierDiscoveryResults');
+
+ button.disabled=true;
+ button.textContent='Searching Bangladesh…';
+ status.className='statusline';
+ status.textContent='Searching public sources across Bangladesh. Please wait.';
+ summary.innerHTML='';
+ results.innerHTML='';
+
+ try{
+  const data=await workerPost('/discover-suppliers',{});
+  discoveredSupplierResults=Array.isArray(data.results)?data.results:[];
+  summary.innerHTML=`
+   <div class="panel">
+    <h3>Supplier search report</h3>
+    <p class="muted">Search provider: ${esc(data.search_provider||'Public web search')}</p>
+    <p class="muted">Geographic scope: ${esc(data.country_scope||'Bangladesh nationwide')}</p>
+    <p class="muted">Searches performed: ${esc(data.searches_performed??'Not supplied')}</p>
+    <p class="muted">Raw search results: ${esc(data.raw_results_found??'Not supplied')}</p>
+    <p class="muted">Potential leads returned: ${esc(data.leads_returned??discoveredSupplierResults.length)}</p>
+    <p class="small">${esc(data.warning||'These are unverified public research leads. Verify all details directly with the supplier.')}</p>
+   </div>`;
+  renderDiscoveredSupplierResults();
+  status.textContent=discoveredSupplierResults.length
+   ?'Search completed. Review the evidence and save relevant leads.'
+   :'The search completed but returned no supplier leads. Try again later.';
+ }catch(error){
+  status.textContent='Search error: '+error.message;
+  status.className='statusline dangertext';
+ }finally{
+  button.disabled=false;
+  button.textContent='Search Bangladesh for garment stocklots';
+ }
+}
+
+function supplierLeadDuplicate(lead){
+ return db.supplierLeads.some(x=>
+  x.source_url&&lead.source_url&&
+  x.source_url.trim().toLowerCase()===lead.source_url.trim().toLowerCase()
+ );
+}
+
+function renderDiscoveredSupplierResults(){
+ const el=document.getElementById('supplierDiscoveryResults');
+ if(!discoveredSupplierResults.length){
+  el.innerHTML='<div class="empty">No supplier leads to display.</div>';
+  return;
+ }
+
+ el.innerHTML=discoveredSupplierResults.map((r,i)=>{
+  const duplicate=supplierLeadDuplicate(r);
+  const images=Array.isArray(r.image_urls)?r.image_urls:[];
+  const imageHtml=images.slice(0,3).map(url=>{
+   if(!/^https?:\/\//i.test(String(url)))return '';
+   return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">View product image</a>`;
+  }).filter(Boolean).join(' · ');
+
+  return `
+   <div class="item">
+    <strong class="result-title">${esc(r.product_name||r.product_type||'Garment stocklot offer')}</strong>
+    <p><b>Supplier:</b> ${esc(r.supplier_name||'Not identified')}</p>
+    <p><b>Product type:</b> ${esc(r.product_type||'Not specified')}</p>
+    <p>${esc(r.product_description||'No product description supplied.')}</p>
+    <p><b>Quantity:</b> ${esc(r.quantity||'Not stated')} · <b>Price:</b> ${esc([r.currency,r.price].filter(Boolean).join(' ')||'Not stated')}</p>
+    <p><b>Condition:</b> ${esc(r.condition||'Not stated')} · <b>Fabric:</b> ${esc(r.fabric_composition||r.fabric||'Not stated')}</p>
+    <p><b>Sizes:</b> ${esc(r.sizes||'Not stated')} · <b>Colours:</b> ${esc(r.colours||'Not stated')}</p>
+    <p><b>Public phone:</b> ${esc(r.public_phone||'Not found')} · <b>Public email:</b> ${esc(r.public_email||'Not found')}</p>
+    <p><b>Website:</b> ${r.website&&/^https?:\/\//i.test(r.website)?`<a href="${esc(r.website)}" target="_blank" rel="noopener noreferrer">${esc(r.website)}</a>`:esc(r.website||'Not found')}</p>
+    <div class="evidence">
+     <p><b>Evidence:</b> ${esc(listText(r.evidence_summary)||'No evidence summary supplied.')}</p>
+     <p><b>Missing information:</b> ${esc(listText(r.missing_information)||'Not specified')}</p>
+     <p><b>Risk flags:</b> ${esc(listText(r.risk_flags)||'None supplied')}</p>
+     <p><b>Confidence:</b> ${esc(r.confidence||'Not stated')}</p>
+    </div>
+    <p><b>Source:</b> ${r.source_url&&/^https?:\/\//i.test(r.source_url)?`<a href="${esc(r.source_url)}" target="_blank" rel="noopener noreferrer">${esc(r.source_title||r.source_url)}</a>`:esc(r.source_title||'Source URL not supplied')}</p>
+    <p class="small">Source date: ${esc(r.source_date||'Not supplied')} · Research source: ${esc(r.research_source||'Public web search')}</p>
+    ${imageHtml?`<p class="small">Images: ${imageHtml}</p>`:''}
+    ${duplicate
+     ?'<span class="pill">Already saved in Supplier Product Leads</span>'
+     :r.source_url
+      ?`<button onclick="saveDiscoveredSupplierLead(${i},this)">Save supplier product lead</button>`
+      :'<span class="pill">Cannot save: source URL missing</span>'}
+   </div>`;
+ }).join('');
+}
+
+async function saveDiscoveredSupplierLead(index,button){
+ const r=discoveredSupplierResults[index];
+ if(!r||!r.source_url){alert('This result has no source URL and cannot be saved safely.');return}
+ if(supplierLeadDuplicate(r)){alert('This source is already in your Supplier Product Leads register.');return}
+
+ if(button){button.disabled=true;button.textContent='Saving…'}
+
+ const record={
+  user_id:currentUser.id,
+  source_url:String(r.source_url),
+  source_title:r.source_title||null,
+  supplier_name:r.supplier_name||null,
+  website:r.website||null,
+  public_phone:r.public_phone||null,
+  public_email:r.public_email||null,
+  product_name:r.product_name||null,
+  product_type:r.product_type||null,
+  product_description:r.product_description||null,
+  quantity:r.quantity==null?null:String(r.quantity),
+  price:r.price==null?null:String(r.price),
+  currency:r.currency||null,
+  condition:r.condition||null,
+  fabric:r.fabric||null,
+  fabric_composition:r.fabric_composition||null,
+  sizes:r.sizes||null,
+  colours:r.colours||null,
+  image_urls:Array.isArray(r.image_urls)?r.image_urls:[],
+  source_date:r.source_date||null,
+  research_source:r.research_source||'Tavily public web search',
+  research_status:'New',
+  confidence:r.confidence||null,
+  evidence_summary:Array.isArray(r.evidence_summary)?r.evidence_summary:[],
+  missing_information:Array.isArray(r.missing_information)?r.missing_information:[],
+  risk_flags:Array.isArray(r.risk_flags)?r.risk_flags:[],
+  raw_evidence:r.raw_evidence??r,
+  notes:null,
+  updated_at:new Date().toISOString()
+ };
+
+ try{
+  const result=await sb.from('gtsa_supplier_leads')
+   .upsert(record,{onConflict:'user_id,source_url'})
+   .select()
+   .single();
+
+  if(result.error)throw result.error;
+
+  log('Supplier product lead saved: '+(record.product_name||record.supplier_name||record.source_url));
+  await refresh();
+  renderDiscoveredSupplierResults();
+  alert('Saved privately in Supplier Product Leads. It has not been added to your active Products catalogue.');
+ }catch(error){
+  alert('Could not save supplier lead: '+error.message);
+  if(button){button.disabled=false;button.textContent='Save supplier product lead'}
+ }
+}
+
+async function loadSupplierLeads(){
+ try{
+  const r=await sb.from('gtsa_supplier_leads')
+   .select('*')
+   .order('discovered_at',{ascending:false});
+  if(r.error)throw r.error;
+  db.supplierLeads=r.data||[];
+  renderSupplierLeads();
+ }catch(error){
+  alert('Could not load supplier leads: '+error.message);
+ }
+}
+
+function renderSupplierLeads(){
+ const el=document.getElementById('supplierLeadList');
+ if(!el)return;
+ const q=(document.getElementById('leadSearch')?.value||'').toLowerCase();
+ const status=document.getElementById('leadStatusFilter')?.value||'';
+
+ const leads=db.supplierLeads.filter(x=>{
+  const text=[
+   x.supplier_name,x.product_name,x.product_type,x.product_description,
+   x.website,x.public_phone,x.public_email,x.source_title,x.source_url,
+   x.fabric,x.fabric_composition,x.condition,x.notes
+  ].join(' ').toLowerCase();
+  return (!q||text.includes(q))&&(!status||x.research_status===status);
+ });
+
+ if(!leads.length){
+  el.innerHTML='<div class="empty">No supplier leads match this filter. Use Discover suppliers to search for public offers.</div>';
+  return;
+ }
+
+ el.innerHTML=leads.map(x=>{
+  const uploaded=x.research_status==='Uploaded to Products'||!!x.uploaded_product_id;
+  const images=Array.isArray(x.image_urls)?x.image_urls:[];
+  const imageLinks=images.slice(0,4).map(url=>{
+   if(!/^https?:\/\//i.test(String(url)))return '';
+   return `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Image</a>`;
+  }).filter(Boolean).join(' · ');
+
+  return `
+   <div class="item">
+    <div class="row between">
+     <strong>${esc(x.product_name||x.product_type||'Unnamed product lead')}</strong>
+     <span class="pill">${esc(x.research_status||'New')}</span>
+    </div>
+    <p><b>Supplier:</b> ${esc(x.supplier_name||'Not identified')}</p>
+    <p>${esc(x.product_description||'No description supplied.')}</p>
+    <p><b>Quantity:</b> ${esc(x.quantity||'Not stated')} · <b>Price:</b> ${esc([x.currency,x.price].filter(Boolean).join(' ')||'Not stated')}</p>
+    <p><b>Condition:</b> ${esc(x.condition||'Not stated')} · <b>Fabric:</b> ${esc(x.fabric_composition||x.fabric||'Not stated')}</p>
+    <p><b>Sizes:</b> ${esc(x.sizes||'Not stated')} · <b>Colours:</b> ${esc(x.colours||'Not stated')}</p>
+    <p><b>Public phone:</b> ${esc(x.public_phone||'Not found')} · <b>Public email:</b> ${esc(x.public_email||'Not found')}</p>
+    <p><b>Website:</b> ${x.website&&/^https?:\/\//i.test(x.website)?`<a href="${esc(x.website)}" target="_blank" rel="noopener noreferrer">${esc(x.website)}</a>`:esc(x.website||'Not found')}</p>
+    <div class="evidence">
+     <p><b>Evidence:</b> ${esc(listText(x.evidence_summary)||'No evidence supplied.')}</p>
+     <p><b>Missing information:</b> ${esc(listText(x.missing_information)||'Not specified')}</p>
+     <p><b>Risk flags:</b> ${esc(listText(x.risk_flags)||'None supplied')}</p>
+     <p><b>Confidence:</b> ${esc(x.confidence||'Not stated')}</p>
+    </div>
+    <p><b>Original source:</b> ${x.source_url&&/^https?:\/\//i.test(x.source_url)?`<a href="${esc(x.source_url)}" target="_blank" rel="noopener noreferrer">${esc(x.source_title||x.source_url)}</a>`:esc(x.source_title||'Not supplied')}</p>
+    <p class="small">Discovered: ${x.discovered_at?new Date(x.discovered_at).toLocaleString():'Not recorded'} · Source date: ${esc(x.source_date||'Not supplied')}</p>
+    ${imageLinks?`<p class="small">Product images: ${imageLinks}</p>`:''}
+    ${x.notes?`<p><b>Your notes:</b> ${esc(x.notes)}</p>`:''}
+    ${uploaded?`<p class="success">Uploaded to the active Products catalogue. Product reference: ${esc(x.uploaded_product_id||'Saved')}</p>`:''}
+    <div class="lead-actions">
+     ${uploaded
+      ?'<span class="pill">Product already uploaded</span>'
+      :`<select id="leadStatus_${esc(x.id)}" aria-label="Lead status">
+        ${['New','Contacted','Negotiating','Agreement reached','Uploaded to Products','Rejected'].map(s=>`<option ${x.research_status===s?'selected':''}>${s}</option>`).join('')}
+       </select>
+       <button class="secondary" onclick="updateSupplierLeadStatus('${esc(x.id)}')">Update status</button>`}
+    </div>
+    ${!uploaded&&x.research_status==='Agreement reached'
+      ?`<div class="evidence">
+        <p class="success"><b>Supplier agreement status selected.</b> Before uploading, make sure you have personally verified the offer and obtained the supplier's permission to market it.</p>
+        <button onclick="uploadSupplierLeadToProducts('${esc(x.id)}',this)">Upload to Products</button>
+       </div>`
+      :''}
+   </div>`;
+ }).join('');
+}
+
+async function updateSupplierLeadStatus(leadId){
+ const select=document.getElementById('leadStatus_'+leadId);
+ if(!select)return;
+ const status=select.value;
+ const allowed=['New','Contacted','Negotiating','Agreement reached','Uploaded to Products','Rejected'];
+ if(!allowed.includes(status)){alert('Invalid status.');return}
+ if(status==='Uploaded to Products'){
+  alert('Use the Upload to Products button after selecting Agreement reached.');return;
+ }
+ const r=await sb.from('gtsa_supplier_leads')
+  .update({research_status:status,updated_at:new Date().toISOString()})
+  .eq('id',leadId);
+ if(r.error){alert('Could not update lead: '+r.error.message);return}
+ log('Supplier lead status updated: '+status);
+ await refresh();
+}
+
+async function uploadSupplierLeadToProducts(leadId,button){
+ const lead=db.supplierLeads.find(x=>x.id===leadId);
+ if(!lead){alert('Supplier lead not found. Refresh the register.');return}
+ if(lead.research_status!=='Agreement reached'){
+  alert('First update the lead status to Agreement reached.');return;
+ }
+ if(lead.uploaded_product_id){
+  alert('This lead has already been uploaded.');return;
+ }
+ if(!lead.supplier_name||!lead.product_name){
+  alert('The supplier name and product name are required before uploading. Verify and update the lead information first.');
+  return;
+ }
+ const confirmed=confirm(
+  'Upload this offer to your active Products catalogue?\n\n'+
+  'Supplier: '+lead.supplier_name+'\n'+
+  'Product: '+lead.product_name+'\n\n'+
+  'Continue only if you have personally verified the offer and obtained the supplier’s agreement and permission to market it.'
+ );
+ if(!confirmed)return;
+
+ if(button){button.disabled=true;button.textContent='Uploading…'}
+
+ try{
+  // Reuse an existing supplier record with the same company name when possible.
+  let supplier=db.suppliers.find(s=>
+   s.name&&s.name.trim().toLowerCase()===lead.supplier_name.trim().toLowerCase()
+  );
+
+  let supplierId=supplier?.id;
+
+  if(!supplierId){
+   const supplierInsert=await sb.from('gtsa_suppliers').insert({
+    company_name:lead.supplier_name,
+    phone:lead.public_phone||null,
+    email:lead.public_email||null,
+    website:lead.website||null,
+    supplier_type:'Stocklot trader',
+    source_url:lead.source_url||null,
+    verification_status:'Contacted',
+    notes:'Created from Supplier Product Leads after user confirmed supplier agreement. Original source: '+(lead.source_url||'Not supplied')
+   }).select('id').single();
+
+   if(supplierInsert.error)throw new Error('Supplier record could not be created: '+supplierInsert.error.message);
+   supplierId=supplierInsert.data.id;
+  }
+
+  const parsed=parsePrice(lead.price||'');
+  const quantity=numericQuantity(lead.quantity);
+  const productNotes=[
+   'Uploaded from Supplier Product Leads after user confirmation of supplier agreement.',
+   'Original source title: '+(lead.source_title||'Not supplied'),
+   'Original source URL: '+(lead.source_url||'Not supplied'),
+   'Source date: '+(lead.source_date||'Not supplied'),
+   'Research evidence: '+listText(lead.evidence_summary),
+   'Missing information at discovery: '+listText(lead.missing_information),
+   'Research risk flags: '+listText(lead.risk_flags),
+   'Image URLs: '+listText(lead.image_urls),
+   'Supplier permission and product availability must be verified by the user.'
+  ].join('\n');
+
+  const productInsert=await sb.from('gtsa_products').insert({
+   supplier_id:supplierId,
+   product_name:lead.product_name,
+   product_type:lead.product_type||lead.product_name,
+   condition:lead.condition||'Not verified',
+   fabric_composition:lead.fabric_composition||lead.fabric||null,
+   quantity:quantity,
+   unit_price:parsed.amount,
+   currency:lead.currency||parsed.currency,
+   minimum_order_quantity:null,
+   sizes:lead.sizes||null,
+   colours:lead.colours||null,
+   availability_status:'To be reconfirmed',
+   shipping_terms:null,
+   photo_path:null,
+   notes:productNotes
+  }).select('id').single();
+
+  if(productInsert.error)throw new Error('Product could not be created: '+productInsert.error.message);
+
+  const update=await sb.from('gtsa_supplier_leads').update({
+   research_status:'Uploaded to Products',
+   uploaded_product_id:String(productInsert.data.id),
+   updated_at:new Date().toISOString()
+  }).eq('id',leadId);
+
+  if(update.error){
+   throw new Error('Product was created, but the lead status could not be updated. Product ID: '+productInsert.data.id+'. Error: '+update.error.message);
+  }
+
+  log('Supplier lead uploaded to Products: '+lead.product_name);
+  await refresh();
+  alert('The supplier and product records have been added to your active catalogue. Review the product details before offering them to buyers.');
+ }catch(error){
+  alert('Upload error: '+error.message);
+  if(button){button.disabled=false;button.textContent='Upload to Products'}
+ }
+}
+
+// BUYER DISCOVERY
 function renderDiscoveryProductSelect(){
  let s=document.getElementById('discoveryProduct');
  let old=s.value;
@@ -454,7 +913,6 @@ function renderDiscoveryProductSelect(){
  if(!db.products.length)s.innerHTML='<option value="">Add a product first</option>';
  else if(db.products.some(x=>x.id===old))s.value=old;
 }
-
 function productForDiscovery(){
  return db.products.find(x=>x.id===document.getElementById('discoveryProduct').value);
 }
@@ -470,10 +928,8 @@ async function discoverBuyers(){
   status.textContent='Please add a product in the Products section first.';
   return;
  }
-
  let countries=document.getElementById('discoveryCountries').value
   .split(/[,;\n]/).map(x=>x.trim()).filter(Boolean).slice(0,3);
-
  if(!countries.length){
   status.textContent='Enter at least one target country.';
   return;
@@ -482,15 +938,9 @@ async function discoverBuyers(){
  button.disabled=true;
  button.textContent='Searching…';
  status.textContent='Searching public websites and assessing possible buyers. This may take a little time.';
- summary.innerHTML='';
- results.innerHTML='';
+ summary.innerHTML='';results.innerHTML='';
 
  try{
-  const {data:{session},error:sessionError}=await sb.auth.getSession();
-  if(sessionError||!session?.access_token){
-   throw new Error('Your login session has expired. Sign out and sign in again.');
-  }
-
   const payload={
    product:{
     product_name:product.name,
@@ -507,24 +957,7 @@ async function discoverBuyers(){
    },
    countries
   };
-
-  const response=await fetch(WORKER_URL+'/discover-buyers',{
-   method:'POST',
-   headers:{
-    'Content-Type':'application/json',
-    'Authorization':'Bearer '+session.access_token
-   },
-   body:JSON.stringify(payload)
-  });
-
-  let data;
-  try{data=await response.json()}
-  catch{throw new Error('The research service returned an unreadable response.')}
-
-  if(!response.ok||!data.success){
-   throw new Error(data.error||'Buyer discovery failed. Please try again.');
-  }
-
+  const data=await workerPost('/discover-buyers',payload);
   discoveredResults=data.results||[];
 
   summary.innerHTML=`
@@ -535,13 +968,10 @@ async function discoverBuyers(){
     <p class="muted">Companies assessed by AI: ${esc(data.candidates_assessed)}</p>
     <p class="small">${esc(data.warning||'Search results are prospects, not confirmed buyers.')}</p>
    </div>`;
-
   renderDiscoveryResults();
-
   status.textContent=discoveredResults.length
    ?'Research complete. Review each result before saving it.'
-   :'The search completed, but no assessable company results were found. Try different countries or product wording.';
-
+   :'The search completed, but no assessable company results were found.';
  }catch(error){
   status.textContent='Search error: '+error.message;
   status.className='statusline dangertext';
@@ -553,19 +983,16 @@ async function discoverBuyers(){
 
 function renderDiscoveryResults(){
  const el=document.getElementById('discoveryResults');
-
  if(!discoveredResults.length){
   el.innerHTML='<div class="empty">No results to display.</div>';
   return;
  }
-
  el.innerHTML=discoveredResults.map((r,i)=>{
   const b=r.buyer||{};
   const alreadySaved=db.buyers.some(x=>
    (x.website&&b.website&&x.website.toLowerCase()===b.website.toLowerCase())||
    (x.name&&b.company_name&&x.name.toLowerCase()===b.company_name.toLowerCase())
   );
-
   return `
    <div class="item">
     <div class="row between">
@@ -576,11 +1003,11 @@ function renderDiscoveryResults(){
     <span class="pill">${esc(r.recommendation||'UNASSESSED')}</span>
     <span class="pill">Confidence: ${esc(r.confidence||'LOW')}</span>
     <p><b>Website / evidence:</b><br>
-     ${b.website?`<a href="${esc(b.website)}" target="_blank" rel="noopener noreferrer" style="color:#8db8ff">${esc(b.website)}</a>`:'No website link supplied'}
+     ${b.website?`<a href="${esc(b.website)}" target="_blank" rel="noopener noreferrer">${esc(b.website)}</a>`:'No website link supplied'}
     </p>
-    <p><b>Search evidence:</b> ${esc((r.evidence_summary||[]).join(' · ')||'No specific evidence summary returned.')}</p>
-    <p><b>Missing information:</b> ${esc((r.missing_information||[]).join(' · ')||'Not specified')}</p>
-    <p><b>Risk flags:</b> ${esc((r.risk_flags||[]).join(' · ')||'None reported by the assessment')}</p>
+    <p><b>Search evidence:</b> ${esc(listText(r.evidence_summary)||'No specific evidence summary returned.')}</p>
+    <p><b>Missing information:</b> ${esc(listText(r.missing_information)||'Not specified')}</p>
+    <p><b>Risk flags:</b> ${esc(listText(r.risk_flags)||'None reported by the assessment')}</p>
     <p><b>Assessment:</b> ${esc(r.reason||'No additional explanation.')}</p>
     <p class="small">Source: ${esc(r.source_title||'Public web search')} ${r.source_date?'· Date: '+esc(r.source_date):''}</p>
     <p class="small">No purchasing contact or current buying intention has been confirmed by this search.</p>
@@ -594,17 +1021,12 @@ function renderDiscoveryResults(){
 async function saveDiscoveredBuyer(index){
  const r=discoveredResults[index];
  if(!r||!r.buyer){alert('This research result is unavailable.');return}
-
  const b=r.buyer;
  const duplicate=db.buyers.some(x=>
   (x.website&&b.website&&x.website.toLowerCase()===b.website.toLowerCase())||
   (x.name&&b.company_name&&x.name.toLowerCase()===b.company_name.toLowerCase())
  );
-
- if(duplicate){
-  alert('This company appears to be already in your Buyers register.');
-  return;
- }
+ if(duplicate){alert('This company appears to be already in your Buyers register.');return}
 
  const product=productForDiscovery();
  const productDescription=product
@@ -617,9 +1039,9 @@ async function saveDiscoveredBuyer(index){
   'Recommendation: '+r.recommendation,
   'AI confidence: '+r.confidence,
   'Assessment: '+(r.reason||''),
-  'Evidence summary: '+(r.evidence_summary||[]).join(' | '),
-  'Missing information: '+(r.missing_information||[]).join(' | '),
-  'Risk flags: '+(r.risk_flags||[]).join(' | '),
+  'Evidence summary: '+listText(r.evidence_summary),
+  'Missing information: '+listText(r.missing_information),
+  'Risk flags: '+listText(r.risk_flags),
   'Search source title: '+(r.source_title||''),
   'Source date: '+(r.source_date||'Not supplied'),
   'Search market: '+document.getElementById('discoveryCountries').value,
@@ -642,13 +1064,8 @@ async function saveDiscoveredBuyer(index){
   notes,
   opt_out:false
  };
-
  const result=await sb.from('gtsa_buyers').insert(record);
- if(result.error){
-  alert('Could not save prospect: '+result.error.message);
-  return;
- }
-
+ if(result.error){alert('Could not save prospect: '+result.error.message);return}
  log('Research prospect saved: '+record.company_name);
  alert('Prospect saved in your Buyers register. Its country and contact details remain unverified.');
  await refresh();
@@ -656,15 +1073,16 @@ async function saveDiscoveredBuyer(index){
 }
 
 // DISPLAY FUNCTIONS
-function supplierName(key){return db.suppliers.find(x=>x.id===key)?.name||'Supplier not found'}
-
+function supplierName(key){
+ return db.suppliers.find(x=>x.id===key)?.name||'Supplier not found';
+}
 async function photoUrl(path){
  if(!path)return '';
  let r=await sb.storage.from('gtsa-product-photos').createSignedUrl(path,3600);
  return r.data?.signedUrl||'';
 }
 
-async function renderSuppliers(){
+function renderSuppliers(){
  let q=(document.getElementById('supplierSearch').value||'').toLowerCase();
  let a=db.suppliers.filter(x=>Object.values(x).join(' ').toLowerCase().includes(q));
  document.getElementById('supplierList').innerHTML=a.length?a.map(x=>`
@@ -674,7 +1092,7 @@ async function renderSuppliers(){
    <p>${esc(x.contact)} ${esc(x.phone)} ${esc(x.email)}</p>
    <p>${esc(x.website)} · Source: ${esc(x.source)}</p>
    <p>${esc(x.notes)}</p>
-   <button class="danger" onclick="removeItem('suppliers','${x.id}')">Delete</button>
+   <button class="danger" onclick="removeItem('suppliers','${esc(x.id)}')">Delete</button>
   </div>`).join(''):'<div class="empty">No suppliers recorded yet.</div>';
 }
 
@@ -685,13 +1103,13 @@ async function renderProducts(){
  for(let x of a){
   let pic=await photoUrl(x.photoPath);
   html.push(`<div class="item">
-   ${pic?`<img class="thumb" src="${pic}" alt="Product photo">`:''}
+   ${pic?`<img class="thumb" src="${esc(pic)}" alt="Product photo">`:''}
    <strong>${esc(x.name)}</strong>
    <p>${esc(x.condition)} · ${esc(x.fabric)} · Qty: ${esc(x.quantity||'Not stated')}</p>
    <p>Supplier: ${esc(supplierName(x.supplier))} · Price: ${esc(x.price||'Not stated')} · MOQ: ${esc(x.moq||'Not stated')}</p>
    <p>Sizes: ${esc(x.sizes)} · Colours: ${esc(x.colours)} · ${esc(x.shipping)}</p>
    <p>${esc(x.notes)}</p>
-   <button class="danger" onclick="removeItem('products','${x.id}')">Delete</button>
+   <button class="danger" onclick="removeItem('products','${esc(x.id)}')">Delete</button>
   </div>`);
  }
  document.getElementById('productList').innerHTML=html.join('')||'<div class="empty">No products recorded yet.</div>';
@@ -709,7 +1127,7 @@ function renderBuyers(){
    <span class="pill">${esc(x.interest)}</span>
    ${x.optOut?'<span class="pill">Opted out — do not contact</span>':''}
    <p>${esc(x.notes)}</p>
-   <button class="danger" onclick="removeItem('buyers','${x.id}')">Delete</button>
+   <button class="danger" onclick="removeItem('buyers','${esc(x.id)}')">Delete</button>
   </div>`).join(''):'<div class="empty">No buyer prospects recorded yet.</div>';
 }
 
@@ -794,14 +1212,12 @@ function copyEmail(){
   navigator.clipboard.writeText(t).then(()=>alert('Email copied.')).catch(()=>fallbackCopy(t));
  }else fallbackCopy(t);
 }
-
 function fallbackCopy(t){
  let a=document.createElement('textarea');
  a.value=t;document.body.appendChild(a);a.select();
  document.execCommand('copy');a.remove();
  alert('Email copied if your browser allowed clipboard access.');
 }
-
 function renderEmailHistory(){
  let el=document.getElementById('emailHistory');
  el.innerHTML=db.emails.length?'<hr><h3>Saved cloud drafts</h3>'+db.emails.slice(0,10).map(x=>`
@@ -809,10 +1225,9 @@ function renderEmailHistory(){
    <strong>${esc(x.buyer||x.recipient_email||'Buyer')}</strong>
    <p>${new Date(x.date).toLocaleString()}</p>
    <p>${esc(x.subject)}</p>
-   <button class="secondary" onclick="loadDraft('${x.id}')">Open draft</button>
+   <button class="secondary" onclick="loadDraft('${esc(x.id)}')">Open draft</button>
   </div>`).join(''):'<p class="muted">No saved drafts yet.</p>';
 }
-
 function loadDraft(k){
  let x=db.emails.find(y=>y.id===k);
  if(x){
@@ -829,11 +1244,9 @@ function exportData(){
  a.click();
  URL.revokeObjectURL(a.href);
 }
-
 function importData(){
  alert('This cloud-connected version currently supports exporting a backup. Importing data is disabled to avoid accidentally duplicating or overwriting cloud records.');
 }
-
 function clearData(){
  alert('For safety, bulk cloud deletion is disabled. Delete individual records using their Delete buttons.');
 }
@@ -842,6 +1255,10 @@ async function renderAll(){
  document.getElementById('mSup').textContent=db.suppliers.length;
  document.getElementById('mProd').textContent=db.products.length;
  document.getElementById('mBuy').textContent=db.buyers.length;
+ document.getElementById('mLeads').textContent=db.supplierLeads.length;
+ document.getElementById('mNegotiating').textContent=db.supplierLeads.filter(x=>
+  ['Contacted','Negotiating','Agreement reached'].includes(x.research_status)
+ ).length;
 
  let count=0;
  db.products.forEach(p=>db.buyers.forEach(b=>{
@@ -860,6 +1277,7 @@ async function renderAll(){
  renderEmailSelects();
  renderDiscoveryProductSelect();
  renderEmailHistory();
+ renderSupplierLeads();
 }
 </script>
 </body>
