@@ -830,12 +830,14 @@ async function discoverBuyers(){
   discoveredResults=outcome.results;
   discoveredRejectedResults=outcome.rejectedResults;
 
-  const qualifiedCount=outcome.results.filter(isQualifiedBuyerAssessment).length;
-  const rejectedCount=outcome.rejectedResults.length;const assessmentErrors=outcome.data.assessment_errors;
-const searchErrors=outcome.data.search_errors;
+  
+const qualifiedCount=outcome.results.filter(isQualifiedBuyerAssessment).length;
+const rejectedCount=outcome.rejectedResults.length;
 const assessmentErrors=outcome.data.assessment_errors;
 const searchErrors=outcome.data.search_errors;
-  summary.innerHTML=`
+
+summary.innerHTML=`
+
    <div class="panel">
     <h3>Search report</h3>
     <p class="muted">Searches performed: ${esc(outcome.data.searches_performed??'Not supplied')}</p>
