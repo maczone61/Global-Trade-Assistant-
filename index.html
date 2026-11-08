@@ -330,6 +330,7 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 let currentUser=null;
 let db={suppliers:[],products:[],buyers:[],emails:[],supplierLeads:[],activity:[]};
 let discoveredResults=[];
+let discoveredRejectedResults=[];
 let discoveredSupplierResults=[];
 let automaticBuyerSearchRunning=false;
 
@@ -696,25 +697,52 @@ async function saveBuyerAssessment(r,product,countries,automatic=false){
  return {saved:true,name:record.company_name,score};
 }
 
+
 async function runBuyerSearch(product,countries,automatic){
  const data=await workerPost('/discover-buyers',makeBuyerPayload(product,countries));
+
  const results=Array.isArray(data.results)?data.results:[];
+ const rejectedResults=Array.isArray(data.rejected_results)?data.rejected_results:[];
+
  let saved=0,duplicates=0,skipped=0,errors=0;
  const details=[];
 
+ // Only qualified results are eligible for saving.
  for(const r of results){
   try{
+   if(!isQualifiedBuyerAssessment(r)){
+    skipped++;
+    continue;
+   }
+
    const outcome=await saveBuyerAssessment(r,product,countries,automatic);
-   if(outcome.saved){saved++;details.push(outcome.name+' ('+outcome.score+'/100)');}
-   else if(outcome.duplicate)duplicates++;
-   else skipped++;
+
+   if(outcome.saved){
+    saved++;
+    details.push(outcome.name+' ('+outcome.score+'/100)');
+   }else if(outcome.duplicate){
+    duplicates++;
+   }else{
+    skipped++;
+   }
   }catch(error){
    errors++;
    details.push('A prospect could not be saved: '+error.message);
   }
  }
- return {data,results,saved,duplicates,skipped,errors,details};
+
+ return {
+  data,
+  results,
+  rejectedResults,
+  saved,
+  duplicates,
+  skipped,
+  errors,
+  details
+ };
 }
+
 
 // AUTOMATIC SEARCH AFTER A PRODUCT IS SAVED
 async function runAutomaticBuyerDiscovery(product){
@@ -767,15 +795,19 @@ function productForDiscovery(){
  return db.products.find(x=>x.id===document.getElementById('discoveryProduct').value)||{};
 }
 
+
 async function discoverBuyers(){
  const button=document.getElementById('discoverBtn');
  const status=document.getElementById('discoveryStatus');
  const summary=document.getElementById('discoverySummary');
  const results=document.getElementById('discoveryResults');
+
  const product=productForDiscovery();
  const hasProduct=!!(product&&product.id);
+
  let countries=document.getElementById('discoveryCountries').value
   .split(/[,;\n]/).map(x=>x.trim()).filter(Boolean).slice(0,4);
+
  if(!countries.length){
   status.textContent='Enter at least one target country.';
   return;
@@ -783,34 +815,45 @@ async function discoverBuyers(){
 
  button.disabled=true;
  button.textContent='Searching…';
+
  status.textContent=hasProduct
   ?'Searching for buyers relevant to '+product.name+' and assessing public evidence. Please wait.'
   :'Searching for general apparel importers, wholesalers, distributors and stocklot buyers. Please wait.';
- summary.innerHTML='';results.innerHTML='';
+
+ summary.innerHTML='';
+ results.innerHTML='';
 
  try{
   const outcome=await runBuyerSearch(product,countries,false);
+
+  // Keep both qualified and rejected candidates for display.
   discoveredResults=outcome.results;
+  discoveredRejectedResults=outcome.rejectedResults;
 
   const qualifiedCount=outcome.results.filter(isQualifiedBuyerAssessment).length;
-  const rejectedCount=outcome.results.length-qualifiedCount;
+  const rejectedCount=outcome.rejectedResults.length;
+
   summary.innerHTML=`
    <div class="panel">
     <h3>Search report</h3>
     <p class="muted">Searches performed: ${esc(outcome.data.searches_performed??'Not supplied')}</p>
-    <p class="muted">Unique search results: ${esc(outcome.data.candidates_found??outcome.results.length)}</p>
-    <p class="muted">Companies assessed: ${esc(outcome.data.candidates_assessed??outcome.results.length)}</p>
+    <p class="muted">Unique search results: ${esc(outcome.data.candidates_found??outcome.results.length+rejectedCount)}</p>
+    <p class="muted">Companies assessed: ${esc(outcome.data.candidates_assessed??outcome.results.length+rejectedCount)}</p>
     <p class="muted">Qualified prospects shown: ${qualifiedCount}</p>
     <p class="muted">Rejected candidates (not saved): ${rejectedCount}</p>
     <p class="muted">New qualified prospects saved to your buyer register: ${outcome.saved}</p>
     <p class="small">${esc(outcome.data.warning||'Search results are prospects, not confirmed buyers.')}</p>
    </div>`;
+
   await refresh();
-  // Re-render after refreshing cloud records so newly saved prospects show the correct saved status.
+
+  // Re-render after refreshing cloud records.
   renderDiscoveryResults();
+
   status.textContent=qualifiedCount
-   ?'Research complete. '+qualifiedCount+' qualified prospect(s) are shown; rejected candidates are separated below. Only qualified prospects can be saved.'
-   :'The search completed, but no qualified buyer prospects were found. Any rejected candidates are separated below.';
+   ?'Research complete. '+qualifiedCount+' qualified prospect(s) are shown; rejected candidates are separated below.'
+   :'The search completed, but no qualified buyer prospects were found. Rejected candidates are separated below.';
+
  }catch(error){
   status.textContent='Search error: '+error.message;
   status.className='statusline dangertext';
@@ -820,17 +863,25 @@ async function discoverBuyers(){
  }
 }
 
+
+
 function renderDiscoveryResults(){
  const el=document.getElementById('discoveryResults');
- if(!discoveredResults.length){
+
+ const qualified=(discoveredResults||[]).filter(isQualifiedBuyerAssessment);
+ const rejected=Array.isArray(discoveredRejectedResults)
+  ?discoveredRejectedResults
+  :(discoveredResults||[]).filter(r=>!isQualifiedBuyerAssessment(r));
+
+ if(!qualified.length&&!rejected.length){
   el.innerHTML='<div class="empty">No results to display.</div>';
   return;
  }
- const qualified=discoveredResults.filter(isQualifiedBuyerAssessment);
- const rejected=discoveredResults.filter(r=>!isQualifiedBuyerAssessment(r));
+
  const card=(r,isQualified)=>{
   const b=r.buyer||r.company||{};
   const alreadySaved=isQualified&&buyerDuplicate(b);
+
   return `
    <div class="item">
     <div class="row between">
@@ -854,13 +905,24 @@ function renderDiscoveryResults(){
       :'<span class="pill">Rejected — not saved to your buyer register</span>'}
    </div>`;
  };
+
  let html=`<h3>Qualified buyer prospects (${qualified.length})</h3>`;
- html+=qualified.length?qualified.map(r=>card(r,true)).join(''):'<div class="empty">No qualified prospects were found in this search. Try other countries or search again later.</div>';
+
+ html+=qualified.length
+  ?qualified.map(r=>card(r,true)).join('')
+  :'<div class="empty">No qualified prospects were found in this search.</div>';
+
  if(rejected.length){
-  html+=`<details class="item"><summary><b>Rejected candidates (${rejected.length}) — not saved</b></summary><p class="small">These companies did not meet the buyer-evidence requirements. They are shown only for transparency and are not added to your buyer register.</p>${rejected.map(r=>card(r,false)).join('')}</details>`;
+  html+=`<details class="item">
+   <summary><b>Rejected candidates (${rejected.length}) — not saved</b></summary>
+   <p class="small">These companies did not meet the buyer-evidence requirements. They are shown only for transparency and are not added to your buyer register.</p>
+   ${rejected.map(r=>card(r,false)).join('')}
+  </details>`;
  }
+
  el.innerHTML=html;
 }
+
 
 // SUPPLIER DISCOVERY
 function normalizeSupplierResults(data){
