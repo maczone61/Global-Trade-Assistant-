@@ -831,14 +831,18 @@ async function discoverBuyers(){
   discoveredRejectedResults=outcome.rejectedResults;
 
   const qualifiedCount=outcome.results.filter(isQualifiedBuyerAssessment).length;
-  const rejectedCount=outcome.rejectedResults.length;
-
+  const rejectedCount=outcome.rejectedResults.length;const assessmentErrors=outcome.data.assessment_errors;
+const searchErrors=outcome.data.search_errors;
+const assessmentErrors=outcome.data.assessment_errors;
+const searchErrors=outcome.data.search_errors;
   summary.innerHTML=`
    <div class="panel">
     <h3>Search report</h3>
     <p class="muted">Searches performed: ${esc(outcome.data.searches_performed??'Not supplied')}</p>
     <p class="muted">Unique search results: ${esc(outcome.data.candidates_found??outcome.results.length+rejectedCount)}</p>
     <p class="muted">Companies assessed: ${esc(outcome.data.candidates_assessed??outcome.results.length+rejectedCount)}</p>
+    <p class="muted">Assessment errors: ${esc(JSON.stringify(assessmentErrors??'Not supplied'))}</p>
+<p class="muted">Search errors: ${esc(JSON.stringify(searchErrors??'Not supplied'))}</p>
     <p class="muted">Qualified prospects shown: ${qualifiedCount}</p>
     <p class="muted">Rejected candidates (not saved): ${rejectedCount}</p>
     <p class="muted">New qualified prospects saved to your buyer register: ${outcome.saved}</p>
